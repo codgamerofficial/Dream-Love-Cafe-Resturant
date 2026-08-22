@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Dream Love Cafe & Restaurant",
+    "slug": "dream-love-restaurant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#120F0E"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dreamlove.restaurant"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#120F0E"
+      },
+      "package": "com.dreamlove.restaurant"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "meta": {
+        "viewport": "width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover",
+        "description": "Dream Love Cafe & Restaurant - Multi-Cuisine Family Cafe & Restaurant in Contai, West Bengal. Serving authentic Indian, Tandoor, Chinese, and Biryani.",
+        "theme-color": "#120F0E"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "dreamlove"
+  }
+}
