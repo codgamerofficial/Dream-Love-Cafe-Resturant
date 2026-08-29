@@ -5,19 +5,23 @@ export const COLORS = {
   surfaceElevated: '#241E1C',  // Elevated Card Surface
   surfaceHover: '#2E2725',     // Card Hover State
   
-  // Accents & Brand Colors
-  copper: '#C87D53',           // Muted Copper Primary
+  // Accents & Brand Colors (Preserving Storefront Identity)
+  brandGreen: '#0D7C66',        // Storefront Turquoise/Emerald
+  brandTurquoise: '#2DD4BF',    // Storefront Glow Accent
+  brandHeart: '#E11D48',        // Storefront Heart/Wave Pink-Red
+  brandHeartLight: '#FB7185',   // Pulse Highlight
+  copper: '#C87D53',           // Muted Copper Secondary
   copperLight: '#E59C72',      // Light Copper Accent
   copperDark: '#9E5B35',       // Dark Copper
   
-  gold: '#E2B062',             // Soft Golden Highlights
+  gold: '#D4AF37',             // Soft Golden Highlights
   goldHover: '#F4C479',
   
   burgundy: '#4A1E24',         // Subtle Burgundy
   burgundyLight: '#63262E',
   
   // Text Colors
-  cream: '#F9F6EE',            // Warm Cream Primary Text
+  cream: '#FDFBF7',            // Warm Cream Primary Text
   creamMuted: '#D8D3C8',       // Muted Text
   textMuted: '#A8A29E',        // Warm Gray Secondary Text
   textSubtle: '#78716C',       // Subtle Text
@@ -37,7 +41,8 @@ export const COLORS = {
   // Borders & Dividers
   border: '#2A2220',
   borderLight: '#3D3330',
-  borderAccent: '#C87D5340',
+  borderAccent: '#0D7C6640',
+  borderHeart: '#E11D4840',
 
   // Overlay
   overlay: 'rgba(18, 15, 14, 0.85)',

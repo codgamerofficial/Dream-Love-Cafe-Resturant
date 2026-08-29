@@ -95,4 +95,4 @@ After deployment, verify that all pages resolve cleanly:
 - `/gallery` — Editorial Photo Gallery
 - `/reviews` — Verified Google Rating Box
 - `/contact` — Map & Plus Code Details
-- `/admin` — Protected Management Portal (`admin@dreamlove.com` / `admin123`)
+- `/admin` — Protected Management Portal (Requires authorized staff authentication)

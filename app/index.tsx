@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   TouchableOpacity, 
   Image, 
   Linking, 
@@ -20,24 +19,31 @@ import {
   Phone, 
   MessageSquare, 
   Sparkles, 
-  Flame, 
   Users, 
   Heart, 
-  Award 
+  CheckCircle2,
+  ExternalLink,
+  Camera
 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../src/theme';
 import { useSettings } from '../src/context/SettingsContext';
 import { MenuCard } from '../src/components/menu/MenuCard';
+import { BrandLogo } from '../src/components/ui/BrandLogo';
 import { analytics } from '../src/services/analytics';
 
 export default function HomePage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { settings, categories, menuItems, customerStories } = useSettings();
-  const isDesktop = width >= 768;
+  const { settings, categories, menuItems, galleryItems, verifiedReviews } = useSettings();
 
-  // Filter chef specials for home section
-  const chefSpecials = menuItems.filter((i) => i.category === 'chef-specials' || i.isFeatured).slice(0, 8);
+  // Responsive Breakpoints
+  const isSmallMobile = width < 380;
+  const isMobile = width < 600;
+  const isTablet = width >= 600 && width < 900;
+  const isDesktop = width >= 900;
+
+  // Filter featured chef specials (Distinct dish-specific culinary presentation)
+  const featuredItems = menuItems.filter((i) => i.isFeatured && (i.image_url || i.image)).slice(0, 6);
 
   const handleOpenMaps = () => {
     analytics.track('directions_click');
@@ -57,32 +63,57 @@ export default function HomePage() {
   return (
     <View style={styles.container}>
       {/* 1. HERO SECTION */}
-      <View style={styles.heroSection}>
+      <View style={[styles.heroSection, isMobile && styles.heroSectionMobile]}>
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80' }}
+          source={{ uri: '/photos/storefront_signboard.jpg' }}
           style={styles.heroBackgroundImage}
           resizeMode="cover"
         />
         <View style={styles.heroOverlay} />
 
         <View style={styles.heroContent}>
-          {/* Status Badges */}
+          {/* Brand Logo */}
+          <View style={styles.heroLogoWrapper}>
+            <BrandLogo 
+              variant="primary" 
+              size={isSmallMobile ? 'md' : isMobile ? 'lg' : 'xl'} 
+            />
+          </View>
+
+          {/* Status & Location Badges */}
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroBadge}>
-              <MapPin size={12} color={COLORS.gold} style={{ marginRight: 4 }} />
+              <MapPin size={11} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
               <Text style={styles.heroBadgeText}>{settings.plusCode}</Text>
             </View>
 
             <View style={styles.heroBadge}>
-              <Clock size={12} color={COLORS.gold} style={{ marginRight: 4 }} />
-              <Text style={styles.heroBadgeText}>Open daily • 12 PM - Midnight</Text>
+              <Clock size={11} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+              <Text style={styles.heroBadgeText}>Open Daily • 12 PM – 12 AM</Text>
+            </View>
+
+            <View style={[styles.heroBadge, { borderColor: COLORS.gold + '60' }]}>
+              <Star size={11} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 4 }} />
+              <Text style={styles.heroBadgeText}>Google {settings.googleRating} ★ ({settings.googleReviewsCount}+ Reviews)</Text>
             </View>
           </View>
 
-          {/* Main Title & Tagline */}
-          <Text style={styles.heroPreTitle}>MULTI-CUISINE FAMILY CAFE & RESTAURANT</Text>
-          <Text style={styles.heroTitle}>DREAM LOVE</Text>
+          {/* Responsive Headline */}
+          <Text style={[
+            styles.heroTitle, 
+            isSmallMobile && styles.heroTitleSmallMobile, 
+            isMobile && !isSmallMobile && styles.heroTitleMobile,
+            isTablet && styles.heroTitleTablet
+          ]}>
+            Good Food. Warm Moments. Made with Love.
+          </Text>
 
+          {/* Short Description */}
+          <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile]}>
+            Welcome to Dream Love Cafe & Restaurant — a local dining destination in Contai serving comforting favourites, Indian classics, tandoori dishes, biryani, Chinese dishes, and refreshing drinks.
+          </Text>
+
+          {/* Cuisine Highlights */}
           <View style={styles.cuisineCapsuleRow}>
             {settings.cuisines.map((c, i) => (
               <React.Fragment key={c}>
@@ -92,82 +123,100 @@ export default function HomePage() {
             ))}
           </View>
 
-          <Text style={styles.heroSubtitle}>
-            A rich dining experience in the heart of Contai. Authentic recipes, sizzling tandoori plates, flavorful biryanis, and cozy evening moments for family and friends.
-          </Text>
-
-          {/* CTAs */}
-          <View style={styles.heroCtaRow}>
+          {/* Responsive CTAs */}
+          <View style={[styles.heroCtaContainer, isMobile && styles.heroCtaContainerMobile]}>
             <TouchableOpacity
-              style={styles.heroPrimaryBtn}
+              style={[styles.heroBtn, styles.heroPrimaryBtn, isMobile && styles.heroBtnFullWidth]}
               onPress={() => router.push('/menu')}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Explore our complete menu"
             >
-              <Utensils size={18} color={COLORS.background} style={{ marginRight: 8 }} />
+              <Utensils size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.heroPrimaryBtnText}>Explore Menu</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.heroSecondaryBtn}
+              style={[styles.heroBtn, styles.heroSecondaryBtn, isMobile && styles.heroBtnFullWidth]}
+              onPress={handleOpenMaps}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Get driving directions to restaurant"
+            >
+              <MapPin size={16} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+              <Text style={styles.heroSecondaryBtnText}>Get Directions</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.heroBtn, styles.heroBookBtn, isMobile && styles.heroBtnFullWidth]}
               onPress={() => {
                 analytics.track('reservation_started');
                 router.push('/book');
               }}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Reserve a table online"
             >
-              <Text style={styles.heroSecondaryBtnText}>Reserve a Table</Text>
+              <Text style={styles.heroBookBtnText}>Book Table</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* 2. STORY SECTION ("Made for moments.") */}
+      {/* 2. AUTHENTIC STORY SECTION */}
       <View style={styles.storySection}>
         <View style={styles.sectionInner}>
-          <View style={[styles.storyFlex, !isDesktop && styles.storyFlexMobile]}>
+          <View style={[styles.storyFlex, isMobile && styles.storyFlexMobile]}>
             
             {/* Story Text */}
             <View style={styles.storyTextCol}>
               <View style={styles.sectionHeaderBadge}>
-                <Sparkles size={14} color={COLORS.copper} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionHeaderBadgeText}>THE EXPERIENCE</Text>
+                <Sparkles size={14} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                <Text style={styles.sectionHeaderBadgeText}>LOCAL DINING DESTINATION</Text>
               </View>
               
-              <Text style={styles.storyHeading}>Made for moments.</Text>
+              <Text style={styles.storyHeading}>About Dream Love Cafe & Restaurant</Text>
               
               <Text style={styles.storyParagraph}>
-                At Dream Love Cafe & Restaurant, dining is about more than just great food — it's about sharing warmth, laughter, and memorable evenings with the people who matter most.
+                Dream Love Cafe & Restaurant is a local dining destination in Contai where guests can enjoy a broad selection of Indian, tandoori, biryani, Chinese and cafe-style favourites in a casual setting.
               </Text>
               
               <Text style={styles.storyParagraph}>
-                Whether you're gathering with family for a weekend feast, sharing biryani with lifelong friends, or enjoying a cozy coffee date, our warm Midnight Café atmosphere and carefully crafted multi-cuisine menu create the perfect setting.
+                Conveniently located in Kishore Nagar Garh on Contai Bypass Road (near the Central Bus Stand, opposite Jawed Habib's), we offer spacious air-conditioned seating for families, couples, and group gatherings, with prompt dine-in, takeaway, and delivery services.
               </Text>
 
-              <View style={styles.storyFeatureGrid}>
+              {/* Responsive Feature Cards */}
+              <View style={[styles.storyFeatureGrid, isMobile && styles.storyFeatureGridMobile]}>
                 <View style={styles.storyFeatureItem}>
-                  <Users size={20} color={COLORS.copper} style={{ marginBottom: 6 }} />
-                  <Text style={styles.storyFeatureTitle}>Family Dining</Text>
-                  <Text style={styles.storyFeatureSub}>Welcoming space for all ages</Text>
+                  <Users size={18} color={COLORS.brandTurquoise} style={{ marginBottom: 6 }} />
+                  <Text style={styles.storyFeatureTitle}>Family Friendly</Text>
+                  <Text style={styles.storyFeatureSub}>Comfortable multi-cuisine dining with AC seating</Text>
                 </View>
 
                 <View style={styles.storyFeatureItem}>
-                  <Heart size={20} color={COLORS.copper} style={{ marginBottom: 6 }} />
-                  <Text style={styles.storyFeatureTitle}>Fresh Ingredients</Text>
-                  <Text style={styles.storyFeatureSub}>Handcrafted daily with care</Text>
+                  <Heart size={18} color={COLORS.brandHeart} style={{ marginBottom: 6 }} />
+                  <Text style={styles.storyFeatureTitle}>Fresh Daily Prep</Text>
+                  <Text style={styles.storyFeatureSub}>Authentic spices, fresh ingredients, crafted with care</Text>
+                </View>
+
+                <View style={styles.storyFeatureItem}>
+                  <CheckCircle2 size={18} color={COLORS.brandTurquoise} style={{ marginBottom: 6 }} />
+                  <Text style={styles.storyFeatureTitle}>3 Dining Modes</Text>
+                  <Text style={styles.storyFeatureSub}>Dine-in • Takeaway • Fast Delivery</Text>
                 </View>
               </View>
             </View>
 
-            {/* Story Imagery Composition */}
+            {/* Real Interior Dining Photo */}
             <View style={styles.storyImageCol}>
               <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80' }}
-                style={styles.storyMainImage}
+                source={{ uri: '/photos/interior_dining_counter.jpg' }}
+                style={[styles.storyMainImage, isMobile && styles.storyMainImageMobile]}
                 resizeMode="cover"
               />
               <View style={styles.storyBadgeCard}>
                 <Text style={styles.storyBadgeNum}>₹200–₹400</Text>
-                <Text style={styles.storyBadgeLabel}>Price for two</Text>
+                <Text style={styles.storyBadgeLabel}>Average price for two</Text>
               </View>
             </View>
 
@@ -175,21 +224,71 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* 3. CUISINE EXPLORER */}
+      {/* 3. REAL RESTAURANT PHOTOGRAPHS */}
+      <View style={styles.galleryPreviewSection}>
+        <View style={styles.sectionInner}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionSubtitle}>REAL ATMOSPHERE</Text>
+              <Text style={styles.sectionTitle}>Real Restaurant Photographs</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.viewAllBtn}
+              onPress={() => router.push('/gallery')}
+            >
+              <Camera size={15} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+              <Text style={styles.viewAllBtnText}>Full Gallery</Text>
+              <ChevronRight size={15} color={COLORS.brandTurquoise} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.realPhotosGrid}>
+            {galleryItems.map((photo) => (
+              <TouchableOpacity
+                key={photo.id}
+                style={[
+                  styles.realPhotoCard, 
+                  isMobile && styles.realPhotoCardMobile,
+                  isTablet && styles.realPhotoCardTablet
+                ]}
+                onPress={() => router.push('/gallery')}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{ uri: photo.image_url }}
+                  style={styles.realPhotoImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.realPhotoOverlay}>
+                  <Text style={styles.realPhotoCategory}>{photo.category}</Text>
+                  <Text style={styles.realPhotoTitle} numberOfLines={1}>{photo.title}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* 4. CUISINE EXPLORER */}
       <View style={styles.cuisineSection}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionSubtitle}>EXPLORE OUR FLAVORS</Text>
+            <Text style={styles.sectionSubtitle}>EXPLORE OUR MENU</Text>
             <Text style={styles.sectionTitle}>Interactive Cuisine Explorer</Text>
           </View>
 
-          <View style={[styles.cuisineGrid, !isDesktop && styles.cuisineGridMobile]}>
+          <View style={styles.cuisineGrid}>
             {categories.map((cat) => {
               const count = menuItems.filter((i) => i.category === cat.slug).length;
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={styles.cuisineCard}
+                  style={[
+                    styles.cuisineCard,
+                    isMobile && styles.cuisineCardMobile,
+                    isTablet && styles.cuisineCardTablet
+                  ]}
                   onPress={() => router.push(`/menu?category=${cat.slug}` as any)}
                   activeOpacity={0.88}
                 >
@@ -211,8 +310,8 @@ export default function HomePage() {
                     </Text>
 
                     <View style={styles.cuisineCardLinkRow}>
-                      <Text style={styles.cuisineCardLinkText}>View Category</Text>
-                      <ChevronRight size={14} color={COLORS.copper} />
+                      <Text style={styles.cuisineCardLinkText}>Explore Category</Text>
+                      <ChevronRight size={13} color={COLORS.brandTurquoise} />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -222,90 +321,102 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* 4. CHEF SPECIALS & SIGNATURE DISHES */}
+      {/* 5. FEATURED MENU SPECIALS */}
       <View style={styles.specialsSection}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeaderRow}>
             <View>
-              <Text style={styles.sectionSubtitle}>HOUSE RECOMMENDATIONS</Text>
-              <Text style={styles.sectionTitle}>Chef Specials & Favorites</Text>
+              <Text style={styles.sectionSubtitle}>POPULAR PICKS</Text>
+              <Text style={styles.sectionTitle}>Featured Dishes & Specials</Text>
             </View>
 
-            {isDesktop && (
+            {!isMobile && (
               <TouchableOpacity
                 style={styles.viewAllBtn}
                 onPress={() => router.push('/menu')}
               >
                 <Text style={styles.viewAllBtnText}>View Full Menu</Text>
-                <ChevronRight size={16} color={COLORS.copper} />
+                <ChevronRight size={15} color={COLORS.brandTurquoise} />
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={[styles.menuGrid, !isDesktop && styles.menuGridMobile]}>
-            {chefSpecials.map((item) => (
-              <View key={item.id} style={[styles.menuGridCol, !isDesktop && styles.menuGridColMobile]}>
+          <View style={styles.menuGrid}>
+            {featuredItems.map((item) => (
+              <View 
+                key={item.id} 
+                style={[
+                  styles.menuGridCol,
+                  isMobile && styles.menuGridColMobile,
+                  isTablet && styles.menuGridColTablet
+                ]}
+              >
                 <MenuCard item={item} />
               </View>
             ))}
           </View>
 
-          {!isDesktop && (
+          {isMobile && (
             <TouchableOpacity
-              style={[styles.viewAllBtn, { marginTop: 16, alignSelf: 'center' }]}
+              style={[styles.viewAllBtn, { marginTop: 16, alignSelf: 'center', paddingVertical: 8 }]}
               onPress={() => router.push('/menu')}
             >
-              <Text style={styles.viewAllBtnText}>View Full Menu</Text>
-              <ChevronRight size={16} color={COLORS.copper} />
+              <Text style={styles.viewAllBtnText}>View Full Menu ({menuItems.length} Dishes)</Text>
+              <ChevronRight size={15} color={COLORS.brandTurquoise} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* 5. VERIFIED GOOGLE REVIEWS BANNER */}
+      {/* 6. VERIFIED PUBLIC REVIEWS & RATINGS */}
       <View style={styles.reviewsBannerSection}>
         <View style={styles.sectionInner}>
-          <View style={[styles.reviewsBannerCard, !isDesktop && styles.reviewsBannerCardMobile]}>
-            
-            {/* Rating Summary */}
-            <View style={styles.ratingBox}>
-              <View style={styles.ratingNumberRow}>
-                <Text style={styles.ratingNumber}>{settings.googleRating}</Text>
-                <Star size={28} color={COLORS.gold} fill={COLORS.gold} style={{ marginLeft: 6 }} />
-              </View>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionSubtitle}>AUTHENTIC FEEDBACK</Text>
+            <Text style={styles.sectionTitle}>Verified Guest Ratings & Reviews</Text>
+          </View>
 
-              <Text style={styles.ratingCountText}>
-                Based on {settings.googleReviewsCount} verified Google reviews
-              </Text>
-
+          <View style={styles.reviewCardsGrid}>
+            {verifiedReviews.map((rev) => (
               <TouchableOpacity
-                style={styles.googleReviewBtn}
-                onPress={() => Linking.openURL(settings.googleReviewsUrl)}
+                key={rev.id}
+                style={[
+                  styles.verifiedReviewCard,
+                  isMobile && styles.verifiedReviewCardMobile,
+                  isTablet && styles.verifiedReviewCardTablet
+                ]}
+                onPress={() => Linking.openURL(rev.externalReviewUrl)}
+                activeOpacity={0.85}
               >
-                <Text style={styles.googleReviewBtnText}>View Google Reviews</Text>
-                <ChevronRight size={14} color={COLORS.gold} />
+                <View style={styles.revHeaderRow}>
+                  <View style={styles.revSourceBadge}>
+                    <Text style={styles.revSourceText}>{rev.source} Listing</Text>
+                  </View>
+                  <View style={styles.revRatingRow}>
+                    <Star size={13} color={COLORS.gold} fill={COLORS.gold} />
+                    <Text style={styles.revRatingNum}>{rev.rating}.0</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.revQuote}>"{rev.reviewText}"</Text>
+
+                <View style={styles.revFooterRow}>
+                  <Text style={styles.revAuthor}>{rev.reviewerName}</Text>
+                  <View style={styles.revExternalLink}>
+                    <Text style={styles.revExternalText}>Source Link</Text>
+                    <ExternalLink size={11} color={COLORS.brandTurquoise} />
+                  </View>
+                </View>
               </TouchableOpacity>
-            </View>
-
-            {/* Featured Customer Story */}
-            <View style={styles.storyReviewBox}>
-              <Text style={styles.storyReviewBadge}>GUEST TESTIMONIAL</Text>
-              <Text style={styles.storyReviewText}>
-                "{customerStories[0]?.text}"
-              </Text>
-              <Text style={styles.storyReviewAuthor}>
-                — {customerStories[0]?.author} ({customerStories[0]?.date})
-              </Text>
-            </View>
-
+            ))}
           </View>
         </View>
       </View>
 
-      {/* 6. VISIT US / CONTACT HIGHLIGHT */}
+      {/* 7. VISIT US & LOCATION DETAILS */}
       <View style={styles.visitSection}>
         <View style={styles.sectionInner}>
-          <View style={[styles.visitGrid, !isDesktop && styles.visitGridMobile]}>
+          <View style={[styles.visitGrid, isMobile && styles.visitGridMobile]}>
             
             {/* Location Details */}
             <View style={styles.visitTextCol}>
@@ -313,43 +424,45 @@ export default function HomePage() {
               <Text style={styles.visitTitle}>Visit Dream Love Cafe & Restaurant</Text>
 
               <View style={styles.visitDetailItem}>
-                <MapPin size={20} color={COLORS.copper} style={styles.visitIcon} />
+                <MapPin size={18} color={COLORS.brandTurquoise} style={styles.visitIcon} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.visitDetailTitle}>Address</Text>
+                  <Text style={styles.visitDetailTitle}>Exact Address</Text>
                   <Text style={styles.visitDetailText}>{settings.address}</Text>
+                  <Text style={styles.visitLandmark}>Landmark: Opposite Jawed Habib's, near Central Bus Stand</Text>
                   <Text style={styles.visitPlusCode}>Plus Code: {settings.plusCode}</Text>
                 </View>
               </View>
 
               <View style={styles.visitDetailItem}>
-                <Clock size={20} color={COLORS.copper} style={styles.visitIcon} />
+                <Clock size={18} color={COLORS.brandTurquoise} style={styles.visitIcon} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.visitDetailTitle}>Opening Hours</Text>
+                  <Text style={styles.visitDetailTitle}>Operating Hours</Text>
                   <Text style={styles.visitDetailText}>{settings.openingHours}</Text>
+                  <Text style={styles.visitLandmark}>Open 7 Days a Week for Dine-in, Takeaway & Delivery</Text>
                 </View>
               </View>
 
-              <View style={styles.visitActionRow}>
-                <TouchableOpacity style={styles.directionsBtn} onPress={handleOpenMaps}>
-                  <MapPin size={16} color={COLORS.background} style={{ marginRight: 6 }} />
+              <View style={[styles.visitActionRow, isMobile && styles.visitActionRowMobile]}>
+                <TouchableOpacity style={[styles.directionsBtn, isMobile && { width: '100%' }]} onPress={handleOpenMaps}>
+                  <MapPin size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
                   <Text style={styles.directionsBtnText}>Get Directions</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
-                  <Phone size={16} color={COLORS.cream} style={{ marginRight: 6 }} />
-                  <Text style={styles.callBtnText}>Call Now</Text>
+                <TouchableOpacity style={[styles.callBtn, isMobile && { width: '100%' }]} onPress={handleCall}>
+                  <Phone size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
+                  <Text style={styles.callBtnText}>Call Restaurant</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.waBtn} onPress={handleWhatsApp}>
-                  <MessageSquare size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.waBtnText}>WhatsApp</Text>
+                <TouchableOpacity style={[styles.waBtn, isMobile && { width: '100%' }]} onPress={handleWhatsApp}>
+                  <MessageSquare size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.waBtnText}>WhatsApp Order</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Quick Dining Modes Info */}
+            {/* Quick Dining & Booking Box */}
             <View style={styles.diningModesBox}>
-              <Text style={styles.diningModesTitle}>Available Dining Modes</Text>
+              <Text style={styles.diningModesTitle}>Dining Options</Text>
 
               {settings.diningModes.map((mode) => (
                 <View key={mode} style={styles.diningModeItem}>
@@ -371,6 +484,7 @@ export default function HomePage() {
           </View>
         </View>
       </View>
+
     </View>
   );
 }
@@ -381,21 +495,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   sectionInner: {
-    maxWidth: 1280,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: SPACING.md,
   },
-  
-  // Hero Styles
+
+  // HERO STYLES
   heroSection: {
-    minHeight: 560,
+    minHeight: 520,
     width: '100%',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: SPACING.xxl,
     backgroundColor: COLORS.background,
+  },
+  heroSectionMobile: {
+    minHeight: 'auto' as any,
+    paddingVertical: SPACING.lg,
   },
   heroBackgroundImage: {
     position: 'absolute',
@@ -410,164 +528,205 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    backgroundColor: 'rgba(18, 15, 14, 0.78)',
   },
   heroContent: {
-    maxWidth: 900,
+    maxWidth: 820,
     width: '100%',
     alignItems: 'center',
     textAlign: 'center',
     paddingHorizontal: SPACING.md,
     zIndex: 10,
   },
+  heroLogoWrapper: {
+    marginBottom: SPACING.sm,
+  },
   heroBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 6,
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 22, 21, 0.85)',
+    backgroundColor: 'rgba(26, 22, 21, 0.88)',
     borderWidth: 1,
-    borderColor: COLORS.copper + '60',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    borderColor: COLORS.brandGreen + '80',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
   },
   heroBadgeText: {
-    color: COLORS.creamMuted,
-    fontSize: 12,
+    color: COLORS.cream,
+    fontSize: 11,
     fontWeight: '600',
   },
-  heroPreTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.copper,
-    letterSpacing: 3,
+  heroTitle: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: COLORS.cream,
+    textAlign: 'center',
+    lineHeight: 50,
+    marginBottom: SPACING.sm,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+  },
+  heroTitleTablet: {
+    fontSize: 34,
+    lineHeight: 42,
+  },
+  heroTitleMobile: {
+    fontSize: 27,
+    lineHeight: 33,
     marginBottom: 8,
   },
-  heroTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: Platform.OS === 'web' ? 52 : 36,
-    fontWeight: '900',
-    color: COLORS.cream,
-    letterSpacing: 2,
+  heroTitleSmallMobile: {
+    fontSize: 23,
+    lineHeight: 29,
+    marginBottom: 6,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: COLORS.creamMuted,
     textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 680,
+    marginBottom: SPACING.sm,
+  },
+  heroSubtitleMobile: {
+    fontSize: 13,
+    lineHeight: 19,
     marginBottom: 8,
   },
   cuisineCapsuleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: SPACING.md,
   },
   cuisineCapsuleText: {
-    color: COLORS.gold,
-    fontSize: 12,
+    color: COLORS.brandTurquoise,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 2,
+    letterSpacing: 1.2,
   },
   bulletDot: {
-    color: COLORS.copper,
-    marginHorizontal: 8,
+    color: COLORS.textSubtle,
+    fontSize: 11,
   },
-  heroSubtitle: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    maxWidth: 680,
-    marginBottom: SPACING.xl,
-  },
-  heroCtaRow: {
+  heroCtaContainer: {
     flexDirection: 'row',
-    gap: 16,
     flexWrap: 'wrap',
+    gap: 10,
     justifyContent: 'center',
+    width: '100%',
+    marginTop: 4,
   },
-  heroPrimaryBtn: {
-    backgroundColor: COLORS.copper,
+  heroCtaContainerMobile: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    maxWidth: 340,
+  },
+  heroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: BORDER_RADIUS.md,
-    ...SHADOWS.glowCopper,
+    minHeight: 44,
+  },
+  heroBtnFullWidth: {
+    width: '100%',
+  },
+  heroPrimaryBtn: {
+    backgroundColor: COLORS.brandHeart,
+    shadowColor: COLORS.brandHeart,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   heroPrimaryBtnText: {
-    color: COLORS.background,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   heroSecondaryBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.cream,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.brandTurquoise,
   },
   heroSecondaryBtnText: {
     color: COLORS.cream,
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  heroBookBtn: {
+    backgroundColor: COLORS.brandGreen,
+  },
+  heroBookBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
   },
 
-  // Story Styles
+  // STORY SECTION STYLES
   storySection: {
-    paddingVertical: SPACING.xxxl,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.background,
   },
   storyFlex: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 48,
+    gap: SPACING.xl,
   },
   storyFlexMobile: {
     flexDirection: 'column',
-    gap: 32,
+    gap: SPACING.lg,
   },
   storyTextCol: {
-    flex: 1,
+    flex: 1.1,
   },
   sectionHeaderBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
   },
   sectionHeaderBadgeText: {
-    color: COLORS.copper,
+    color: COLORS.brandTurquoise,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   storyHeading: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 34,
+    fontSize: 26,
     fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
   },
   storyParagraph: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.md,
+    color: COLORS.creamMuted,
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: SPACING.sm,
   },
   storyFeatureGrid: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 10,
     marginTop: SPACING.sm,
   },
+  storyFeatureGridMobile: {
+    flexDirection: 'column',
+    gap: 8,
+  },
   storyFeatureItem: {
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.surface,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
@@ -576,91 +735,156 @@ const styles = StyleSheet.create({
   },
   storyFeatureTitle: {
     color: COLORS.cream,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
+    marginBottom: 2,
   },
   storyFeatureSub: {
-    color: COLORS.textSubtle,
-    fontSize: 12,
-    marginTop: 2,
+    color: COLORS.textMuted,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   storyImageCol: {
-    flex: 1,
-    position: 'relative',
-    minHeight: 320,
+    flex: 0.9,
     width: '100%',
+    position: 'relative',
   },
   storyMainImage: {
     width: '100%',
-    height: 360,
-    borderRadius: BORDER_RADIUS.xl,
+    height: 320,
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  storyMainImageMobile: {
+    height: 220,
   },
   storyBadgeCard: {
     position: 'absolute',
-    bottom: -20,
-    right: 20,
+    bottom: -10,
+    left: 16,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.copper,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: BORDER_RADIUS.md,
-    ...SHADOWS.card,
   },
   storyBadgeNum: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 20,
-    fontWeight: '800',
     color: COLORS.gold,
+    fontSize: 15,
+    fontWeight: '800',
   },
   storyBadgeLabel: {
-    fontSize: 11,
     color: COLORS.textMuted,
+    fontSize: 10.5,
   },
 
-  // Cuisine Section
+  // GALLERY PREVIEW STYLES
+  galleryPreviewSection: {
+    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.surfaceElevated,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: SPACING.lg,
+  },
+  sectionSubtitle: {
+    color: COLORS.brandTurquoise,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.cream,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllBtnText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  realPhotosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  realPhotoCard: {
+    width: '23.8%',
+    height: 200,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: COLORS.surface,
+  },
+  realPhotoCardTablet: {
+    width: '48.5%',
+  },
+  realPhotoCardMobile: {
+    width: '100%',
+    height: 190,
+  },
+  realPhotoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  realPhotoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: SPACING.sm,
+    backgroundColor: 'rgba(18, 15, 14, 0.75)',
+  },
+  realPhotoCategory: {
+    color: COLORS.brandTurquoise,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  realPhotoTitle: {
+    color: COLORS.cream,
+    fontSize: 12.5,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+
+  // CUISINE EXPLORER STYLES
   cuisineSection: {
-    paddingVertical: SPACING.xxxl,
+    paddingVertical: SPACING.xl,
     backgroundColor: COLORS.background,
   },
   sectionHeader: {
     alignItems: 'center',
-    marginBottom: SPACING.xxl,
-  },
-  sectionSubtitle: {
-    color: COLORS.copper,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 32,
-    fontWeight: '700',
-    color: COLORS.cream,
-    textAlign: 'center',
+    marginBottom: SPACING.lg,
   },
   cuisineGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 20,
-  },
-  cuisineGridMobile: {
-    flexDirection: 'column',
-    gap: 16,
+    gap: 12,
   },
   cuisineCard: {
-    flex: 1,
-    minWidth: 280,
-    height: 220,
+    width: '31.8%',
+    height: 190,
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
     position: 'relative',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 8,
+  },
+  cuisineCardTablet: {
+    width: '48.5%',
+  },
+  cuisineCardMobile: {
+    width: '100%',
+    height: 160,
   },
   cuisineCardImage: {
     width: '100%',
@@ -672,7 +896,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.75)',
+    backgroundColor: 'rgba(18, 15, 14, 0.60)',
   },
   cuisineCardContent: {
     position: 'absolute',
@@ -680,245 +904,234 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     justifyContent: 'flex-end',
   },
   cuisineCountBadge: {
     position: 'absolute',
-    top: SPACING.md,
-    right: SPACING.md,
-    backgroundColor: 'rgba(26, 22, 21, 0.85)',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    top: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: 'rgba(18, 15, 14, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BORDER_RADIUS.sm,
   },
   cuisineCountText: {
     color: COLORS.gold,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   cuisineCardName: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 20,
-    fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   cuisineCardDesc: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    lineHeight: 16,
-    marginBottom: 12,
+    color: COLORS.creamMuted,
+    fontSize: 11.5,
+    lineHeight: 15,
+    marginBottom: 6,
   },
   cuisineCardLinkRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   cuisineCardLinkText: {
-    color: COLORS.copper,
-    fontSize: 13,
-    fontWeight: '700',
-    marginRight: 4,
+    color: COLORS.brandTurquoise,
+    fontSize: 11.5,
+    fontWeight: '600',
   },
 
-  // Specials Section
+  // SPECIALS STYLES
   specialsSection: {
-    paddingVertical: SPACING.xxxl,
+    paddingVertical: SPACING.xl,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.xxl,
-  },
-  viewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  viewAllBtnText: {
-    color: COLORS.cream,
-    fontSize: 13,
-    fontWeight: '600',
-    marginRight: 4,
   },
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -10,
-  },
-  menuGridMobile: {
-    flexDirection: 'column',
-    marginHorizontal: 0,
+    gap: 12,
   },
   menuGridCol: {
-    width: '25%',
-    paddingHorizontal: 10,
-    marginBottom: 20,
+    width: '32%',
+  },
+  menuGridColTablet: {
+    width: '48.5%',
   },
   menuGridColMobile: {
     width: '100%',
-    paddingHorizontal: 0,
-    marginBottom: 16,
   },
 
-  // Reviews Banner
+  // REVIEWS BANNER STYLES
   reviewsBannerSection: {
-    paddingVertical: SPACING.xxl,
+    paddingVertical: SPACING.xl,
     backgroundColor: COLORS.background,
   },
-  reviewsBannerCard: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
+  reviewCardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  verifiedReviewCard: {
+    width: '32%',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.copper + '40',
-    padding: SPACING.xl,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'space-between',
+  },
+  verifiedReviewCardTablet: {
+    width: '48.5%',
+  },
+  verifiedReviewCardMobile: {
+    width: '100%',
+  },
+  revHeaderRow: {
     flexDirection: 'row',
-    gap: 40,
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
-  reviewsBannerCardMobile: {
-    flexDirection: 'column',
-    gap: 24,
+  revSourceBadge: {
+    backgroundColor: COLORS.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
-  ratingBox: {
-    flex: 1,
-    borderRightWidth: Platform.OS === 'web' ? 1 : 0,
-    borderRightColor: COLORS.border,
-    paddingRight: SPACING.md,
+  revSourceText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 10.5,
+    fontWeight: '700',
   },
-  ratingNumberRow: {
+  revRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 4,
   },
-  ratingNumber: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 48,
-    fontWeight: '900',
-    color: COLORS.cream,
+  revRatingNum: {
+    color: COLORS.gold,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  ratingCountText: {
+  revQuote: {
+    color: COLORS.creamMuted,
     fontSize: 13,
-    color: COLORS.textMuted,
+    lineHeight: 19,
+    fontStyle: 'italic',
     marginBottom: SPACING.md,
   },
-  googleReviewBtn: {
+  revFooterRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
-  googleReviewBtnText: {
-    color: COLORS.gold,
-    fontSize: 13,
-    fontWeight: '700',
-    marginRight: 4,
-  },
-  storyReviewBox: {
-    flex: 1.5,
-  },
-  storyReviewBadge: {
-    color: COLORS.copper,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  storyReviewText: {
-    fontSize: 15,
-    fontStyle: 'italic',
-    lineHeight: 22,
-    color: COLORS.creamMuted,
-    marginBottom: 8,
-  },
-  storyReviewAuthor: {
+  revAuthor: {
+    color: COLORS.cream,
     fontSize: 12,
-    color: COLORS.textSubtle,
     fontWeight: '600',
   },
+  revExternalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  revExternalText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 11,
+  },
 
-  // Visit Section
+  // VISIT SECTION STYLES
   visitSection: {
-    paddingVertical: SPACING.xxxl,
-    backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.surfaceElevated,
   },
   visitGrid: {
     flexDirection: 'row',
-    gap: 40,
+    gap: SPACING.xl,
   },
   visitGridMobile: {
     flexDirection: 'column',
-    gap: 32,
+    gap: SPACING.lg,
   },
   visitTextCol: {
-    flex: 1.5,
+    flex: 1.3,
   },
   visitTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.md,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
   },
   visitDetailItem: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
+    marginBottom: 14,
   },
   visitIcon: {
-    marginRight: 14,
+    marginRight: 10,
     marginTop: 2,
   },
   visitDetailTitle: {
-    fontSize: 14,
+    color: COLORS.copper,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: COLORS.cream,
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
   visitDetailText: {
-    fontSize: 14,
+    color: COLORS.cream,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  visitLandmark: {
     color: COLORS.textMuted,
-    lineHeight: 20,
+    fontSize: 11.5,
+    marginTop: 2,
   },
   visitPlusCode: {
-    fontSize: 12,
-    color: COLORS.copper,
-    marginTop: 4,
+    color: COLORS.gold,
+    fontSize: 11.5,
     fontWeight: '600',
+    marginTop: 2,
   },
   visitActionRow: {
     flexDirection: 'row',
-    gap: 10,
     flexWrap: 'wrap',
-    marginTop: SPACING.md,
+    gap: 8,
+    marginTop: SPACING.sm,
+  },
+  visitActionRowMobile: {
+    flexDirection: 'column',
   },
   directionsBtn: {
-    backgroundColor: COLORS.copper,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.brandGreen,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
   },
   directionsBtnText: {
-    color: COLORS.background,
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
   },
   callBtn: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
@@ -929,9 +1142,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   waBtn: {
-    backgroundColor: '#25D366',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16A34A',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
@@ -942,52 +1156,48 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   diningModesBox: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    flex: 0.9,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   diningModesTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 18,
-    fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: SPACING.md,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
   },
   diningModeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   diningDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.copper,
-    marginRight: 10,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.brandTurquoise,
+    marginRight: 8,
   },
   diningModeText: {
     color: COLORS.creamMuted,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
   },
   diningBoxCta: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
   },
   diningBookBtn: {
-    backgroundColor: COLORS.copper + '20',
-    borderWidth: 1,
-    borderColor: COLORS.copper,
-    paddingVertical: 12,
+    backgroundColor: COLORS.brandHeart,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
   diningBookBtnText: {
-    color: COLORS.gold,
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
   },
 });

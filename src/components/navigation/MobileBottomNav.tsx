@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, useWindowDimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { Home, UtensilsCrossed, ShoppingBag, Calendar, MessageSquare, Phone, Info } from 'lucide-react-native';
+import { Home, UtensilsCrossed, ShoppingBag, Calendar, MessageSquare, Phone, MapPin } from 'lucide-react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../theme';
 import { useCart } from '../../context/CartContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -24,7 +24,7 @@ export const MobileBottomNav: React.FC = () => {
     { label: 'Menu', href: '/menu', icon: UtensilsCrossed },
     { label: 'Order', action: openCart, icon: ShoppingBag, badge: itemCount },
     { label: 'Bookings', href: '/book', icon: Calendar },
-    { label: 'Visit', href: '/contact', icon: Info },
+    { label: 'Visit', href: '/visit', icon: MapPin },
   ];
 
   const handleWhatsApp = () => {
@@ -54,9 +54,10 @@ export const MobileBottomNav: React.FC = () => {
           style={styles.floatingCallButton}
           onPress={handleCall}
           activeOpacity={0.85}
+          accessibilityRole="button"
           accessibilityLabel="Call restaurant directly"
         >
-          <Phone size={20} color="#FFFFFF" />
+          <Phone size={18} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* WhatsApp Button */}
@@ -64,9 +65,10 @@ export const MobileBottomNav: React.FC = () => {
           style={styles.floatingWaButton}
           onPress={handleWhatsApp}
           activeOpacity={0.85}
+          accessibilityRole="button"
           accessibilityLabel="Chat on WhatsApp"
         >
-          <MessageSquare size={20} color="#FFFFFF" />
+          <MessageSquare size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -87,12 +89,14 @@ export const MobileBottomNav: React.FC = () => {
                   router.push(item.href as any);
                 }
               }}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
             >
               <View style={styles.iconContainer}>
                 <IconComponent
-                  size={20}
-                  color={active ? COLORS.gold : COLORS.textSubtle}
+                  size={19}
+                  color={active ? COLORS.brandTurquoise : COLORS.textSubtle}
                 />
                 {item.badge !== undefined && item.badge > 0 && (
                   <View style={styles.badge}>
@@ -114,36 +118,36 @@ export const MobileBottomNav: React.FC = () => {
 const styles = StyleSheet.create({
   floatingContainer: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-    bottom: 80,
-    right: 16,
+    bottom: 68,
+    right: 14,
     flexDirection: 'column',
-    gap: 12,
+    gap: 10,
     zIndex: 999,
   },
   floatingCallButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#3B82F6', // Crisp action blue for phone calls
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35,
-    shadowRadius: 6,
+    shadowRadius: 5,
     elevation: 6,
   },
   floatingWaButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#25D366', // Authentic WhatsApp Green
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#16A34A',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35,
-    shadowRadius: 6,
+    shadowRadius: 5,
     elevation: 6,
   },
   bottomNavContainer: {
@@ -151,19 +155,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: 'rgba(26, 22, 21, 0.98)',
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingVertical: SPACING.xs + 2,
-    paddingBottom: Platform.OS === 'ios' ? 24 : SPACING.xs + 4,
+    paddingVertical: 6,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+    minHeight: 56,
     zIndex: 998,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 8,
   },
   tabItem: {
@@ -171,35 +176,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
     paddingVertical: 2,
+    minHeight: 42,
   },
   iconContainer: {
     position: 'relative',
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badge: {
     position: 'absolute',
     top: -4,
-    right: -8,
-    backgroundColor: COLORS.copper,
+    right: -10,
+    backgroundColor: COLORS.brandHeart,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
   },
   badgeText: {
-    color: COLORS.background,
+    color: '#FFFFFF',
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   tabLabel: {
     fontSize: 10,
     color: COLORS.textSubtle,
     fontWeight: '500',
-    marginTop: 3,
+    marginTop: 2,
   },
   tabLabelActive: {
-    color: COLORS.gold,
+    color: COLORS.brandTurquoise,
     fontWeight: '700',
   },
 });

@@ -21,3 +21,6 @@ yarn-error.log*
 *.pem
 .idea/
 .vscode/
+
+.vercel
+.env*.local

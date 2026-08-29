@@ -1,11 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { RestaurantSettings, MenuItem, MenuCategory, GalleryItem, CustomerStory } from '../types';
+import { 
+  RestaurantSettings, 
+  MenuItem, 
+  MenuCategory, 
+  GalleryItem, 
+  VerifiedReview,
+  DataConflictItem 
+} from '../types';
 import { 
   INITIAL_RESTAURANT_SETTINGS, 
   INITIAL_MENU_ITEMS, 
   MENU_CATEGORIES, 
-  INITIAL_GALLERY_ITEMS, 
-  INITIAL_CUSTOMER_STORIES 
+  REAL_GALLERY_PHOTOS, 
+  VERIFIED_REVIEWS,
+  INITIAL_DATA_CONFLICTS 
 } from '../config/restaurantData';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 
@@ -22,7 +30,10 @@ interface SettingsContextType {
   galleryItems: GalleryItem[];
   addGalleryItem: (item: Omit<GalleryItem, 'id'>) => Promise<void>;
   deleteGalleryItem: (id: string) => Promise<void>;
-  customerStories: CustomerStory[];
+  verifiedReviews: VerifiedReview[];
+  dataConflicts: DataConflictItem[];
+  resolveDataConflict: (id: string, chosenValue: string) => void;
+  ignoreDataConflict: (id: string) => void;
   isLoading: boolean;
 }
 
@@ -32,8 +43,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [settings, setSettings] = useState<RestaurantSettings>(INITIAL_RESTAURANT_SETTINGS);
   const [categories] = useState<MenuCategory[]>(MENU_CATEGORIES);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(INITIAL_GALLERY_ITEMS);
-  const [customerStories] = useState<CustomerStory[]>(INITIAL_CUSTOMER_STORIES);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(REAL_GALLERY_PHOTOS);
+  const [verifiedReviews, setVerifiedReviews] = useState<VerifiedReview[]>(VERIFIED_REVIEWS);
+  const [dataConflicts, setDataConflicts] = useState<DataConflictItem[]>(INITIAL_DATA_CONFLICTS);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch remote settings & menu items if Supabase is connected
@@ -44,25 +56,32 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const { data: dbSettings } = await supabase.from('restaurant_settings').select('*').single();
         if (dbSettings) {
-          setSettings({
-            name: dbSettings.name,
-            tagline: dbSettings.tagline,
-            cuisines: dbSettings.cuisines,
-            phone: dbSettings.phone,
-            whatsapp: dbSettings.whatsapp,
-            address: dbSettings.address,
-            plusCode: dbSettings.plus_code,
-            googleMapsCid: dbSettings.google_maps_cid,
-            googleMapsUrl: dbSettings.google_maps_url,
-            openingHours: dbSettings.opening_hours,
-            priceRangeForTwo: dbSettings.price_range_for_two,
-            diningModes: dbSettings.dining_modes,
-            googleRating: Number(dbSettings.google_rating) || 4.1,
-            googleReviewsCount: Number(dbSettings.google_reviews_count) || 96,
-            googleReviewsUrl: dbSettings.google_reviews_url || dbSettings.google_maps_url,
-            orderInstructions: dbSettings.order_instructions || INITIAL_RESTAURANT_SETTINGS.orderInstructions,
-            reservationInstructions: dbSettings.reservation_instructions || INITIAL_RESTAURANT_SETTINGS.reservationInstructions,
-          });
+          setSettings((prev) => ({
+            ...prev,
+            name: dbSettings.name || prev.name,
+            tagline: dbSettings.tagline || prev.tagline,
+            cuisines: dbSettings.cuisines || prev.cuisines,
+            phone: dbSettings.phone || prev.phone,
+            phoneSecondary: dbSettings.phone_secondary || prev.phoneSecondary,
+            whatsapp: dbSettings.whatsapp || prev.whatsapp,
+            email: dbSettings.email || prev.email,
+            address: dbSettings.address || prev.address,
+            plusCode: dbSettings.plus_code || prev.plusCode,
+            googleMapsCid: dbSettings.google_maps_cid || prev.googleMapsCid,
+            googleMapsUrl: dbSettings.google_maps_url || prev.googleMapsUrl,
+            openingHours: dbSettings.opening_hours || prev.openingHours,
+            priceRangeForTwo: dbSettings.price_range_for_two || prev.priceRangeForTwo,
+            diningModes: dbSettings.dining_modes || prev.diningModes,
+            googleRating: Number(dbSettings.google_rating) || prev.googleRating,
+            googleReviewsCount: Number(dbSettings.google_reviews_count) || prev.googleReviewsCount,
+            googleReviewsUrl: dbSettings.google_reviews_url || prev.googleReviewsUrl,
+            justdialRating: Number(dbSettings.justdial_rating) || prev.justdialRating,
+            justdialUrl: dbSettings.justdial_url || prev.justdialUrl,
+            magicpinRating: Number(dbSettings.magicpin_rating) || prev.magicpinRating,
+            magicpinUrl: dbSettings.magicpin_url || prev.magicpinUrl,
+            orderInstructions: dbSettings.order_instructions || prev.orderInstructions,
+            reservationInstructions: dbSettings.reservation_instructions || prev.reservationInstructions,
+          }));
         }
 
         const { data: dbMenu } = await supabase.from('menu_items').select('*').order('display_order', { ascending: true });
@@ -70,16 +89,45 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const mappedMenu: MenuItem[] = dbMenu.map((item: any) => ({
             id: item.id,
             name: item.name,
+            canonicalName: item.canonical_name || undefined,
+            canonical_name: item.canonical_name || undefined,
+            originalName: item.original_name || undefined,
+            original_name: item.original_name || undefined,
             category: item.category_slug,
+            category_id: item.category_id,
+            subcategory: item.subcategory,
             description: item.description,
-            price: item.price ? Number(item.price) : undefined,
+            price: item.price ? Number(item.price) : null,
+            priceType: item.price_type || (item.price ? 'fixed' : 'owner_verification_required'),
+            price_type: item.price_type || (item.price ? 'fixed' : 'owner_verification_required'),
             priceRange: item.price_range,
             portion: item.portion,
+            serving_size: item.serving_size,
             image: item.image_url,
-            isAvailable: item.is_available,
-            isFeatured: item.is_featured,
-            isVeg: item.is_veg,
-            displayOrder: item.display_order,
+            image_url: item.image_url,
+            image_source: item.image_source,
+            image_license_status: item.image_license_status,
+            image_verified: item.image_verified ?? false,
+            price_source: item.price_source || 'client_supplied_menu',
+            price_verified: item.price_verified ?? true,
+            ownerVerified: item.owner_verified ?? true,
+            owner_verified: item.owner_verified ?? true,
+            isAvailable: item.is_available ?? true,
+            is_available: item.is_available ?? true,
+            isFeatured: item.is_featured ?? false,
+            is_featured: item.is_featured ?? false,
+            isVeg: item.is_veg ?? false,
+            is_vegetarian: item.is_veg ?? false,
+            is_non_vegetarian: !item.is_veg,
+            isEgg: item.is_egg ?? false,
+            is_egg: item.is_egg ?? false,
+            isSpicy: item.is_spicy ?? false,
+            is_spicy: item.is_spicy ?? false,
+            source: item.source || 'Client Menu',
+            sourceUrl: item.source_url,
+            dataQualityStatus: item.data_quality_status || 'verified',
+            displayOrder: item.display_order ?? 0,
+            sort_order: item.sort_order ?? item.display_order ?? 0,
           }));
           setMenuItems(mappedMenu);
         }
@@ -97,7 +145,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (isSupabaseConfigured && supabase) {
       await supabase.from('restaurant_settings').update({
         phone: newSettings.phone,
+        phone_secondary: newSettings.phoneSecondary,
         whatsapp: newSettings.whatsapp,
+        email: newSettings.email,
         address: newSettings.address,
         opening_hours: newSettings.openingHours,
         price_range_for_two: newSettings.priceRangeForTwo,
@@ -116,15 +166,23 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (isSupabaseConfigured && supabase) {
       await supabase.from('menu_items').insert([{
         name: item.name,
+        canonical_name: item.canonicalName,
         category_slug: item.category,
+        subcategory: item.subcategory,
         description: item.description,
         price: item.price,
+        price_type: item.priceType,
         price_range: item.priceRange,
         portion: item.portion,
         image_url: item.image,
         is_available: item.isAvailable,
         is_featured: item.isFeatured,
         is_veg: item.isVeg,
+        is_egg: item.isEgg,
+        is_spicy: item.isSpicy,
+        source: item.source,
+        owner_verified: item.ownerVerified,
+        data_quality_status: item.dataQualityStatus,
         display_order: item.displayOrder,
       }]);
     }
@@ -174,6 +232,36 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setGalleryItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const resolveDataConflict = (id: string, chosenValue: string) => {
+    setDataConflicts((prev) =>
+      prev.map((conflict) =>
+        conflict.id === id
+          ? {
+              ...conflict,
+              currentValue: chosenValue,
+              status: 'resolved',
+              resolvedAt: new Date().toISOString(),
+            }
+          : conflict
+      )
+    );
+
+    // Automatically sync chosen setting if relevant
+    if (id === 'conflict-phone') {
+      updateSettings({ phone: chosenValue });
+    } else if (id === 'conflict-hours') {
+      updateSettings({ openingHours: chosenValue });
+    }
+  };
+
+  const ignoreDataConflict = (id: string) => {
+    setDataConflicts((prev) =>
+      prev.map((conflict) =>
+        conflict.id === id ? { ...conflict, status: 'ignored' } : conflict
+      )
+    );
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -189,7 +277,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         galleryItems,
         addGalleryItem,
         deleteGalleryItem,
-        customerStories,
+        verifiedReviews,
+        dataConflicts,
+        resolveDataConflict,
+        ignoreDataConflict,
         isLoading,
       }}
     >

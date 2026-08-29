@@ -5,26 +5,30 @@ describe('WhatsApp Order Message Generator', () => {
   const items: CartItem[] = [
     {
       menuItem: {
-        id: 'm-6',
+        id: 'm-rnv-2',
         name: 'Chicken Biriyani',
-        category: 'chef-specials',
-        price: 160,
+        category: 'biryani-rice',
+        price: 100,
         isAvailable: true,
         isFeatured: true,
         isVeg: false,
-        displayOrder: 6,
+        ownerVerified: true,
+        dataQualityStatus: 'verified',
+        displayOrder: 69,
       },
       quantity: 2,
     },
     {
       menuItem: {
-        id: 'm-1',
+        id: 'm-sp-1',
         name: 'Chicken Vorta',
         category: 'chef-specials',
-        price: 270,
+        price: 180,
         isAvailable: true,
         isFeatured: true,
         isVeg: false,
+        ownerVerified: true,
+        dataQualityStatus: 'verified',
         displayOrder: 1,
       },
       quantity: 1,
@@ -40,14 +44,14 @@ describe('WhatsApp Order Message Generator', () => {
         orderType: 'dine-in',
         tableNumber: 'Table 4',
       },
-      590,
+      380,
       '+919933388167'
     );
 
     expect(text).toContain('Hello Dream Love Cafe & Restaurant');
-    expect(text).toContain('Chicken Biriyani × 2 (₹320)');
-    expect(text).toContain('Chicken Vorta × 1 (₹270)');
-    expect(text).toContain('Estimated total: ₹590');
+    expect(text).toContain('Chicken Biriyani × 2 (₹200)');
+    expect(text).toContain('Chicken Vorta × 1 (₹180)');
+    expect(text).toContain('Estimated total: ₹380');
     expect(text).toContain('Name: Test Guest');
     expect(link).toContain('https://wa.me/919933388167?text=');
   });

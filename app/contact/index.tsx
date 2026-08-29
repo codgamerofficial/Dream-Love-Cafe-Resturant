@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, useWindowDimensions, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MapPin, Phone, Clock, MessageSquare, ExternalLink, Calendar, ShoppingBag, Compass } from 'lucide-react-native';
+import { MapPin, Phone, Clock, MessageSquare, ExternalLink, Calendar, ShoppingBag, Compass, Navigation } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 
@@ -11,13 +11,18 @@ export default function ContactPage() {
   const { settings } = useSettings();
   const isDesktop = width >= 768;
 
+  // Google Maps embed URL using Plus Code
+  const mapQuery = encodeURIComponent('Dream Love Cafe & Restaurant, QPHM+8QV, Contai, West Bengal 721404, India');
+  const googleMapsEmbedUrl = `https://maps.google.com/maps?q=${mapQuery}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+  const googleMapsDirectUrl = settings.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapQuery}`;
+
   const handleOpenMaps = () => {
-    Linking.openURL(settings.googleMapsUrl);
+    Linking.openURL(googleMapsDirectUrl);
   };
 
   const handleGetDirections = () => {
-    const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(settings.plusCode)}`;
-    Linking.openURL(dirUrl);
+    Linking.openURL(directionsUrl);
   };
 
   const handleCall = () => {
@@ -33,107 +38,160 @@ export default function ContactPage() {
       <View style={styles.innerContainer}>
         {/* Header */}
         <View style={styles.headerBox}>
-          <Text style={styles.preTitle}>CONTAI, WEST BENGAL</Text>
-          <Text style={styles.title}>Visit Dream Love</Text>
+          <Text style={styles.eyebrow}>CONTAI, WEST BENGAL</Text>
+          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>Visit Dream Love</Text>
           <Text style={styles.subtitle}>
             Multi-Cuisine Family Cafe & Restaurant. Located at Central Bus Stand, Contai Bypass Road.
           </Text>
         </View>
 
-        {/* Action Cards Row */}
-        <View style={[styles.contactGrid, !isDesktop && styles.contactGridMobile]}>
-          
-          {/* Main Info Card */}
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Location & Directions</Text>
+        {/* Main Content Grid */}
+        <View style={[styles.contentGrid, !isDesktop && styles.contentGridMobile]}>
 
-            <View style={styles.infoRow}>
-              <MapPin size={22} color={COLORS.copper} style={styles.infoIcon} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>Address</Text>
-                <Text style={styles.infoValue}>{settings.address}</Text>
-                <Text style={styles.plusCodeLabel}>Plus Code: {settings.plusCode}</Text>
+          {/* Left Column: Location & Map */}
+          <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile]}>
+
+            {/* Google Maps Embed Card */}
+            <View style={styles.mapCard}>
+              <Text style={styles.cardTitle}>Location & Directions</Text>
+
+              {/* Interactive Google Map */}
+              <View style={[styles.mapContainer, !isDesktop && styles.mapContainerMobile]}>
+                {Platform.OS === 'web' ? (
+                  <iframe
+                    src={googleMapsEmbedUrl}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0, borderRadius: 16 } as any}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Google Maps location of Dream Love Cafe & Restaurant"
+                  />
+                ) : (
+                  <TouchableOpacity style={styles.mapFallback} onPress={handleOpenMaps}>
+                    <MapPin size={32} color={COLORS.brandTurquoise} />
+                    <Text style={styles.mapFallbackText}>View Restaurant Location on Google Maps</Text>
+                    <Text style={styles.mapFallbackSub}>Tap to open in Google Maps</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Accessible location text */}
+              <Text style={styles.mapAccessibleText}>
+                Dream Love Cafe & Restaurant is located at {settings.plusCode}, Central Bus Stand, Contai Bypass Road, opposite Jawed Habib's, Contai, West Bengal 721404.
+              </Text>
+
+              {/* Map Action Buttons */}
+              <View style={styles.mapActionsRow}>
+                <TouchableOpacity style={styles.mapBtnPrimary} onPress={handleOpenMaps}>
+                  <ExternalLink size={15} color={COLORS.background} style={{ marginRight: 6 }} />
+                  <Text style={styles.mapBtnPrimaryText}>View on Google Maps</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.mapBtnSecondary} onPress={handleGetDirections}>
+                  <Navigation size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
+                  <Text style={styles.mapBtnSecondaryText}>Get Directions</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.infoRow}>
-              <Clock size={22} color={COLORS.copper} style={styles.infoIcon} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>Opening Hours</Text>
-                <Text style={styles.infoValue}>{settings.openingHours}</Text>
+            {/* Restaurant Info Card */}
+            <View style={styles.infoCard}>
+              {/* Real Storefront Photo */}
+              <View style={styles.storefrontBox}>
+                <Image
+                  source={{ uri: '/photos/storefront_signboard.jpg' }}
+                  style={styles.storefrontImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.storefrontCaption}>
+                  Dream Love Cafe & Restaurant storefront on Contai Bypass Road.
+                </Text>
               </View>
-            </View>
 
-            <View style={styles.infoRow}>
-              <Phone size={22} color={COLORS.copper} style={styles.infoIcon} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>Telephone & WhatsApp</Text>
-                <Text style={styles.infoValue}>{settings.phone}</Text>
+              <View style={styles.infoRow}>
+                <MapPin size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoLabel}>Address</Text>
+                  <Text style={styles.infoValue}>{settings.address}</Text>
+                  <Text style={styles.plusCodeText}>Plus Code: {settings.plusCode}</Text>
+                </View>
               </View>
-            </View>
 
-            {/* Direct Google Maps Actions */}
-            <View style={styles.mapsActionRow}>
-              <TouchableOpacity style={styles.mapsBtnPrimary} onPress={handleOpenMaps}>
-                <ExternalLink size={16} color={COLORS.background} style={{ marginRight: 6 }} />
-                <Text style={styles.mapsBtnPrimaryText}>View on Google Maps</Text>
-              </TouchableOpacity>
+              <View style={styles.infoRow}>
+                <Clock size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoLabel}>Opening Hours</Text>
+                  <Text style={styles.infoValue}>{settings.openingHours}</Text>
+                </View>
+              </View>
 
-              <TouchableOpacity style={styles.mapsBtnSecondary} onPress={handleGetDirections}>
-                <Compass size={16} color={COLORS.cream} style={{ marginRight: 6 }} />
-                <Text style={styles.mapsBtnSecondaryText}>Get Directions</Text>
-              </TouchableOpacity>
+              <View style={styles.infoRow}>
+                <Phone size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoLabel}>Telephone & WhatsApp</Text>
+                  <Text style={styles.infoValue}>{settings.phone}</Text>
+                </View>
+              </View>
             </View>
           </View>
 
-          {/* Quick Actions & Dining Info Sidebar */}
-          <View style={styles.sidebarCol}>
-            
-            {/* Quick Primary Actions */}
-            <View style={styles.quickActionCard}>
-              <Text style={styles.cardTitle}>Instant Actions</Text>
+          {/* Right Column: Actions + Specs */}
+          <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile]}>
 
-              <TouchableOpacity style={styles.actionBtnCall} onPress={handleCall}>
-                <Phone size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Call Restaurant Now</Text>
-              </TouchableOpacity>
+            {/* Instant Actions */}
+            <View style={styles.actionsCard}>
+              <Text style={styles.cardTitle}>Quick Actions</Text>
 
-              <TouchableOpacity style={styles.actionBtnWa} onPress={handleWhatsApp}>
-                <MessageSquare size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Order / Chat on WhatsApp</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionBtnBook} onPress={() => router.push('/book')}>
+              {/* Primary: Reserve */}
+              <TouchableOpacity style={styles.actionPrimary} onPress={() => router.push('/book')}>
                 <Calendar size={18} color={COLORS.background} style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnBookText}>Reserve Table Online</Text>
+                <Text style={styles.actionPrimaryText}>Reserve Table Online</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionBtnMenu} onPress={() => router.push('/menu')}>
-                <ShoppingBag size={18} color={COLORS.cream} style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnMenuText}>Browse Complete Menu</Text>
+              {/* Secondary: WhatsApp */}
+              <TouchableOpacity style={styles.actionWhatsApp} onPress={handleWhatsApp}>
+                <MessageSquare size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.actionWhatsAppText}>Order / Chat on WhatsApp</Text>
+              </TouchableOpacity>
+
+              {/* Utility buttons */}
+              <TouchableOpacity style={styles.actionUtility} onPress={handleCall}>
+                <Phone size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
+                <Text style={styles.actionUtilityText}>Call Restaurant</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionUtility} onPress={handleGetDirections}>
+                <Compass size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
+                <Text style={styles.actionUtilityText}>Get Directions</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionUtility} onPress={() => router.push('/menu')}>
+                <ShoppingBag size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
+                <Text style={styles.actionUtilityText}>Browse Complete Menu</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Operational Specs Card */}
+            {/* Dining Specs */}
             <View style={styles.specsCard}>
-              <Text style={styles.specsTitle}>Dining & Pricing Specs</Text>
+              <Text style={styles.specsTitle}>Dining & Pricing</Text>
 
-              <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Price for two:</Text>
+              <View style={styles.specRow}>
+                <Text style={styles.specLabel}>Typical spend for two:</Text>
                 <Text style={styles.specValue}>{settings.priceRangeForTwo}</Text>
               </View>
+              <Text style={styles.specDisclaimer}>Based on public listings</Text>
 
-              <View style={styles.specItem}>
+              <View style={styles.specRow}>
                 <Text style={styles.specLabel}>Dining Modes:</Text>
-                <Text style={styles.specValue}>{settings.diningModes.join(' • ')}</Text>
+                <Text style={styles.specValue}>{settings.diningModes.join(' · ')}</Text>
               </View>
 
-              <View style={styles.specItem}>
+              <View style={styles.specRow}>
                 <Text style={styles.specLabel}>Cuisines:</Text>
                 <Text style={styles.specValue}>{settings.cuisines.join(', ')}</Text>
               </View>
             </View>
-
           </View>
         </View>
       </View>
@@ -146,50 +204,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContent: {
-    paddingVertical: SPACING.xxl,
-  },
   innerContainer: {
-    maxWidth: 1100,
+    maxWidth: 1240,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.xxl,
   },
+
+  // Header
   headerBox: {
     alignItems: 'center',
     marginBottom: SPACING.xxl,
   },
-  preTitle: {
-    fontSize: 11,
+  eyebrow: {
+    fontSize: 12,
     fontWeight: '700',
     color: COLORS.copper,
-    letterSpacing: 2.5,
+    letterSpacing: 3,
     marginBottom: 6,
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
     marginBottom: 8,
   },
+  titleDesktop: {
+    fontSize: 48,
+  },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.textMuted,
     textAlign: 'center',
     maxWidth: 600,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  contactGrid: {
+
+  // Content Grid
+  contentGrid: {
     flexDirection: 'row',
-    gap: 32,
+    gap: 28,
   },
-  contactGridMobile: {
+  contentGridMobile: {
     flexDirection: 'column',
   },
-  infoCard: {
-    flex: 1.4,
+  mainColumn: {
+    flex: 1.5,
+    gap: 24,
+  },
+  mainColumnMobile: {
+    width: '100%',
+  },
+  sideColumn: {
+    flex: 1,
+    gap: 20,
+  },
+  sideColumnMobile: {
+    width: '100%',
+  },
+
+  // Map Card
+  mapCard: {
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
@@ -197,16 +275,109 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     ...SHADOWS.card,
   },
-  sidebarCol: {
-    flex: 1,
-    gap: 20,
-  },
   cardTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: COLORS.cream,
+    marginBottom: SPACING.md,
+  },
+  mapContainer: {
+    width: '100%',
+    height: 400,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+    marginBottom: SPACING.md,
+  },
+  mapContainerMobile: {
+    height: 280,
+  },
+  mapFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    padding: SPACING.xl,
+  },
+  mapFallbackText: {
+    fontSize: 16,
+    color: COLORS.cream,
+    fontWeight: '600',
+    marginTop: SPACING.md,
+    textAlign: 'center',
+  },
+  mapFallbackSub: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  mapAccessibleText: {
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    lineHeight: 17,
+    marginBottom: SPACING.md,
+  },
+  mapActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  mapBtnPrimary: {
+    backgroundColor: COLORS.copper,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  mapBtnPrimaryText: {
+    color: COLORS.background,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  mapBtnSecondary: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  mapBtnSecondaryText: {
+    color: COLORS.cream,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // Info Card
+  infoCard: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  storefrontBox: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface,
+  },
+  storefrontImage: {
+    width: '100%',
+    height: 180,
+  },
+  storefrontCaption: {
+    padding: SPACING.sm,
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   infoRow: {
     flexDirection: 'row',
@@ -219,8 +390,8 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.copper,
-    letterSpacing: 1,
+    color: COLORS.brandTurquoise,
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
   infoValue: {
@@ -228,130 +399,105 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
     lineHeight: 20,
   },
-  plusCodeLabel: {
+  plusCodeText: {
     fontSize: 12,
     color: COLORS.gold,
-    marginTop: 4,
+    marginTop: 3,
     fontWeight: '600',
   },
-  mapsActionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-    marginTop: SPACING.md,
-  },
-  mapsBtnPrimary: {
-    backgroundColor: COLORS.copper,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  mapsBtnPrimaryText: {
-    color: COLORS.background,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  mapsBtnSecondary: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  mapsBtnSecondaryText: {
-    color: COLORS.cream,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quickActionCard: {
+
+  // Actions Card
+  actionsCard: {
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
+    ...SHADOWS.card,
   },
-  actionBtnCall: {
-    backgroundColor: '#3B82F6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: 10,
-  },
-  actionBtnWa: {
-    backgroundColor: '#25D366',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: 10,
-  },
-  actionBtnBook: {
+  actionPrimary: {
     backgroundColor: COLORS.copper,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: BORDER_RADIUS.md,
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  actionBtnMenu: {
+  actionPrimaryText: {
+    color: COLORS.background,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  actionWhatsApp: {
+    backgroundColor: '#16A34A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: 12,
+  },
+  actionWhatsAppText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  actionUtility: {
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: BORDER_RADIUS.md,
+    marginBottom: 8,
   },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  actionBtnBookText: {
-    color: COLORS.background,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  actionBtnMenuText: {
+  actionUtilityText: {
     color: COLORS.cream,
     fontSize: 14,
     fontWeight: '600',
   },
+
+  // Specs Card
   specsCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   specsTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: SPACING.md,
   },
-  specItem: {
+  specRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   specLabel: {
     fontSize: 13,
     color: COLORS.textMuted,
+    flex: 1,
   },
   specValue: {
     fontSize: 13,
     color: COLORS.gold,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'right',
+  },
+  specDisclaimer: {
+    fontSize: 11,
+    color: COLORS.textSubtle,
+    fontStyle: 'italic',
+    marginBottom: 10,
+    marginTop: -4,
+    textAlign: 'right',
   },
 });

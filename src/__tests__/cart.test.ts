@@ -2,31 +2,35 @@ import { CartItem, MenuItem } from '../types';
 
 describe('Cart Calculations', () => {
   const sampleItem1: MenuItem = {
-    id: 'm-1',
+    id: 'm-sp-1',
     name: 'Chicken Vorta',
     category: 'chef-specials',
-    price: 270,
+    price: 180,
     isAvailable: true,
     isFeatured: true,
     isVeg: false,
+    ownerVerified: true,
+    dataQualityStatus: 'verified',
     displayOrder: 1,
   };
 
   const sampleItem2: MenuItem = {
-    id: 'm-2',
-    name: 'Kadhai Mutton',
-    category: 'chef-specials',
-    price: 395,
+    id: 'm-tan-1',
+    name: 'Chicken Tandoori',
+    category: 'tandoori-kebabs',
+    price: 200,
     isAvailable: true,
     isFeatured: true,
     isVeg: false,
-    displayOrder: 2,
+    ownerVerified: true,
+    dataQualityStatus: 'verified',
+    displayOrder: 45,
   };
 
   test('calculates subtotal correctly for single and multiple quantities', () => {
     const items: CartItem[] = [
-      { menuItem: sampleItem1, quantity: 2 }, // 270 * 2 = 540
-      { menuItem: sampleItem2, quantity: 1 }, // 395 * 1 = 395
+      { menuItem: sampleItem1, quantity: 2 }, // 180 * 2 = 360
+      { menuItem: sampleItem2, quantity: 1 }, // 200 * 1 = 200
     ];
 
     const subtotal = items.reduce((sum, item) => {
@@ -34,7 +38,7 @@ describe('Cart Calculations', () => {
       return sum + price * item.quantity;
     }, 0);
 
-    expect(subtotal).toBe(935);
+    expect(subtotal).toBe(560);
   });
 
   test('calculates total item count correctly', () => {

@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from 'react-native';
-import { Plus, Minus, Check, Sparkles } from 'lucide-react-native';
+import { Plus, Minus, Check, Sparkles, UtensilsCrossed, CookingPot, Flame, Fish, Wheat, Salad, GlassWater, Coffee, Clock } from 'lucide-react-native';
 import { MenuItem } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme';
 import { useCart } from '../../context/CartContext';
+import { useSettings } from '../../context/SettingsContext';
 
 interface MenuCardProps {
   item: MenuItem;
@@ -11,61 +12,139 @@ interface MenuCardProps {
 
 export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
   const { items, addItem, incrementQuantity, decrementQuantity } = useCart();
+  const { settings } = useSettings();
 
   const cartEntry = items.find((i) => i.menuItem.id === item.id);
   const quantity = cartEntry ? cartEntry.quantity : 0;
 
-  // Render price display text according to prompt specification
+  // Format authentic price according to specifications
   const renderPriceText = () => {
-    if (item.price !== undefined && item.price > 0) {
+    if (item.price !== undefined && item.price !== null && item.price > 0) {
       return `₹${item.price}`;
+    }
+    if (item.price_type === 'size_based' || item.priceType === 'size_based' || (item.portion && item.portion.toLowerCase().includes('size'))) {
+      return 'As per size';
     }
     if (item.priceRange) {
       return item.priceRange;
     }
-    return 'Ask for price';
+    return 'Price on request';
   };
+
+  // Get appropriate category icon when no image exists
+  const getCategoryIcon = () => {
+    switch (item.category) {
+      case 'biryani-rice':
+        return <CookingPot size={32} color={COLORS.gold} />;
+      case 'tandoori-kebabs':
+        return <Flame size={32} color={COLORS.brandHeart} />;
+      case 'seafood-fish':
+        return <Fish size={32} color={COLORS.brandTurquoise} />;
+      case 'breads-kulchas':
+        return <Wheat size={32} color={COLORS.copper} />;
+      case 'soups':
+      case 'main-course-veg':
+        return <Salad size={32} color={COLORS.vegGreen} />;
+      case 'beverages-shakes-mocktails':
+        return <GlassWater size={32} color={COLORS.brandTurquoise} />;
+      default:
+        return <UtensilsCrossed size={32} color={COLORS.copper} />;
+    }
+  };
+
+  const imageUrl = item.image_url || item.image;
+  const isMockImage = item.image_type === 'mock_placeholder';
+  const showSampleBadge = Boolean(settings.showSampleBadges && isMockImage);
 
   return (
     <View style={[styles.cardContainer, !item.isAvailable && styles.cardUnavailable]}>
-      {/* Visual Image Header */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80' }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-        <View style={styles.imageOverlay} />
+      {/* 1. VISUAL FOOD HEADER */}
+      {imageUrl ? (
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+          <View style={styles.imageOverlay} />
 
-        {/* Veg / Non-Veg Indicator Badge */}
-        <View style={styles.badgeTopLeft}>
-          <View style={[styles.vegBadge, item.isVeg ? styles.vegBadgeVeg : styles.vegBadgeNonVeg]}>
-            <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : styles.vegDotNonVeg]} />
+          {/* Veg / Non-Veg / Egg Indicator Badge */}
+          <View style={styles.badgeTopLeft}>
+            <View style={[styles.vegBadge, item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg]}>
+              <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg]} />
+            </View>
           </View>
+
+          {/* Featured / Special Tag */}
+          {item.isFeatured && (
+            <View style={styles.featuredBadge}>
+              <Sparkles size={9} color="#FFFFFF" style={{ marginRight: 3 }} />
+              <Text style={styles.featuredBadgeText}>SPECIAL</Text>
+            </View>
+          )}
+
+          {/* Sample Preview Tag (Only when enabled in settings) */}
+          {showSampleBadge && !item.isFeatured && (
+            <View style={styles.sampleBadge}>
+              <Text style={styles.sampleBadgeText}>Sample</Text>
+            </View>
+          )}
+
+          {/* Spicy Indicator */}
+          {item.isSpicy && (
+            <View style={styles.spicyBadge}>
+              <Text style={styles.spicyBadgeText}>🌶️ SPICY</Text>
+            </View>
+          )}
+
+          {/* Portion Tag if exists */}
+          {item.portion && (
+            <View style={styles.portionBadge}>
+              <Text style={styles.portionBadgeText}>{item.portion}</Text>
+            </View>
+          )}
         </View>
-
-        {/* Featured Tag */}
-        {item.isFeatured && (
-          <View style={styles.featuredBadge}>
-            <Sparkles size={10} color={COLORS.background} style={{ marginRight: 3 }} />
-            <Text style={styles.featuredBadgeText}>CHEF SPECIAL</Text>
+      ) : (
+        /* Neutral Category Visual when no image exists */
+        <View style={styles.placeholderContainer}>
+          <View style={styles.placeholderPattern}>
+            {getCategoryIcon()}
           </View>
-        )}
 
-        {/* Portion Tag if exists */}
-        {item.portion && (
-          <View style={styles.portionBadge}>
-            <Text style={styles.portionBadgeText}>{item.portion}</Text>
+          {/* Dietary Indicator Badge */}
+          <View style={styles.badgeTopLeft}>
+            <View style={[styles.vegBadge, item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg]}>
+              <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg]} />
+            </View>
           </View>
-        )}
-      </View>
 
-      {/* Card Content Details */}
+          {/* Subcategory Pill */}
+          {item.subcategory && (
+            <View style={styles.subcategoryBadge}>
+              <Text style={styles.subcategoryBadgeText}>{item.subcategory}</Text>
+            </View>
+          )}
+
+          {/* Portion Tag */}
+          {item.portion && (
+            <View style={styles.portionBadge}>
+              <Text style={styles.portionBadgeText}>{item.portion}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* 2. CARD CONTENT DETAILS */}
       <View style={styles.contentContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={2}>
             {item.name}
           </Text>
+          {item.canonical_name && item.canonical_name !== item.name && (
+            <Text style={styles.canonicalSubtitle} numberOfLines={1}>
+              ({item.canonical_name})
+            </Text>
+          )}
         </View>
 
         {item.description ? (
@@ -74,12 +153,17 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
           </Text>
         ) : null}
 
-        {/* Price & Action Row */}
+        {/* 3. PRICE & ACTION FOOTER */}
         <View style={styles.footerRow}>
           <View style={styles.priceContainer}>
-            <Text style={[styles.priceText, !item.price && !item.priceRange && styles.askPriceText]}>
+            <Text style={[styles.priceText, (!item.price || item.price === 0) && styles.askPriceText]}>
               {renderPriceText()}
             </Text>
+            {item.price_source && (
+              <Text style={styles.priceSourceTag}>
+                {item.price_verified ? '✓ Verified' : 'Menu Price'}
+              </Text>
+            )}
           </View>
 
           {/* Add to Order / Quantity Counter */}
@@ -92,25 +176,34 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
               style={styles.addButton}
               onPress={() => addItem(item)}
               activeOpacity={0.8}
+              accessibilityRole="button"
               accessibilityLabel={`Add ${item.name} to order`}
             >
-              <Plus size={14} color={COLORS.background} style={{ marginRight: 4 }} />
+              <Plus size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
               <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.quantityControl}>
               <TouchableOpacity
-                style={styles.quantityBtn}
+                style={styles.qtyBtn}
                 onPress={() => decrementQuantity(item.id)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Decrease quantity"
               >
-                <Minus size={12} color={COLORS.cream} />
+                <Minus size={13} color={COLORS.cream} />
               </TouchableOpacity>
-              <Text style={styles.quantityText}>{quantity}</Text>
+
+              <Text style={styles.qtyText}>{quantity}</Text>
+
               <TouchableOpacity
-                style={styles.quantityBtn}
+                style={styles.qtyBtn}
                 onPress={() => incrementQuantity(item.id)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Increase quantity"
               >
-                <Plus size={12} color={COLORS.cream} />
+                <Plus size={13} color={COLORS.cream} />
               </TouchableOpacity>
             </View>
           )}
@@ -124,17 +217,19 @@ const styles = StyleSheet.create({
   cardContainer: {
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.border,
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    height: '100%',
     ...SHADOWS.card,
   },
   cardUnavailable: {
     opacity: 0.65,
   },
   imageContainer: {
-    height: 150,
+    height: 165,
     width: '100%',
     position: 'relative',
     backgroundColor: COLORS.surface,
@@ -149,21 +244,35 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.25)',
+    backgroundColor: 'rgba(18, 15, 14, 0.15)',
+  },
+  placeholderContainer: {
+    height: 90,
+    width: '100%',
+    position: 'relative',
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  placeholderPattern: {
+    opacity: 0.35,
   },
   badgeTopLeft: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 8,
+    left: 8,
+    zIndex: 5,
   },
   vegBadge: {
-    width: 18,
-    height: 18,
+    width: 17,
+    height: 17,
     borderWidth: 1.5,
     borderRadius: 3,
-    alignItems: 'center',
+    backgroundColor: 'rgba(26, 22, 21, 0.92)',
     justifyContent: 'center',
-    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    alignItems: 'center',
   },
   vegBadgeVeg: {
     borderColor: COLORS.vegGreen,
@@ -171,10 +280,13 @@ const styles = StyleSheet.create({
   vegBadgeNonVeg: {
     borderColor: COLORS.nonVegRed,
   },
+  vegBadgeEgg: {
+    borderColor: COLORS.gold,
+  },
   vegDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   vegDotVeg: {
     backgroundColor: COLORS.vegGreen,
@@ -182,33 +294,86 @@ const styles = StyleSheet.create({
   vegDotNonVeg: {
     backgroundColor: COLORS.nonVegRed,
   },
+  vegDotEgg: {
+    backgroundColor: COLORS.gold,
+  },
   featuredBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: COLORS.copper,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.sm,
+    top: 8,
+    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.brandHeart,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BORDER_RADIUS.sm,
+    zIndex: 5,
   },
   featuredBadgeText: {
-    color: COLORS.background,
-    fontSize: 9,
+    color: '#FFFFFF',
+    fontSize: 9.5,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  portionBadge: {
+  sampleBadge: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(26, 22, 21, 0.85)',
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
+    zIndex: 5,
+  },
+  sampleBadgeText: {
+    color: COLORS.textMuted,
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  spicyBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.nonVegRed + '60',
+  },
+  spicyBadgeText: {
+    color: '#FFAAAA',
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  subcategoryBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.surfaceElevated,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  subcategoryBadgeText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  portionBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   portionBadgeText: {
     color: COLORS.gold,
@@ -217,86 +382,106 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: SPACING.md,
-    justifyContent: 'space-between',
     flex: 1,
+    justifyContent: 'space-between',
   },
   titleRow: {
     marginBottom: 4,
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.cream,
     lineHeight: 20,
   },
+  canonicalSubtitle: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
   description: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     lineHeight: 16,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   footerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
     marginTop: 'auto',
   },
   priceContainer: {
-    flex: 1,
+    flexDirection: 'column',
   },
   priceText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: COLORS.gold,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   askPriceText: {
-    fontSize: 13,
+    fontSize: 12.5,
+    color: COLORS.textMuted,
     fontWeight: '600',
-    color: COLORS.copperLight,
-    fontStyle: 'italic',
+  },
+  priceSourceTag: {
+    fontSize: 9,
+    color: COLORS.textSubtle,
+    marginTop: 1,
   },
   addButton: {
-    backgroundColor: COLORS.copper,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    backgroundColor: COLORS.brandHeart,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: BORDER_RADIUS.md,
+    minHeight: 32,
+    shadowColor: COLORS.brandHeart,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addButtonText: {
-    color: COLORS.background,
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.copper,
     borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: COLORS.brandHeart,
+    overflow: 'hidden',
   },
-  quantityBtn: {
-    padding: 6,
+  qtyBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: COLORS.brandHeart + '25',
   },
-  quantityText: {
+  qtyText: {
     color: COLORS.cream,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
     paddingHorizontal: 8,
   },
   unavailableBadge: {
     backgroundColor: COLORS.border,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
   },
   unavailableText: {
-    color: COLORS.textSubtle,
+    color: COLORS.textMuted,
     fontSize: 11,
     fontWeight: '600',
   },

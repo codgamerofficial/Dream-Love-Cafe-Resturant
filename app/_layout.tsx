@@ -14,21 +14,21 @@ import { COLORS } from '../src/theme';
 
 export default function RootLayout() {
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith('/admin');
+  const isAdminOrAuthRoute = pathname.startsWith('/admin') || pathname.startsWith('/auth');
 
   return (
     <AuthProvider>
       <SettingsProvider>
         <CartProvider>
           <View style={styles.rootContainer}>
-            <StatusBar style="light" backgroundColor={COLORS.background} />
+            <StatusBar style="light" />
             <SEOHead />
 
-            {/* Header */}
-            <Header />
+            {/* Public Header - Only rendered on public website pages */}
+            {!isAdminOrAuthRoute && <Header />}
 
-            {/* Main Scroll View containing Page Slot & Footer */}
-            {isAdminRoute ? (
+            {/* Main Page Slot & Footer */}
+            {isAdminOrAuthRoute ? (
               <View style={styles.adminSlotWrapper}>
                 <Slot />
               </View>
@@ -42,13 +42,13 @@ export default function RootLayout() {
                   <Slot />
                 </View>
 
-                {/* Footer at end of page content */}
+                {/* Footer at end of public page content */}
                 <Footer />
               </ScrollView>
             )}
 
-            {/* Mobile Bottom Navigation & Floating CTAs */}
-            {!isAdminRoute && <MobileBottomNav />}
+            {/* Mobile Bottom Navigation & Floating CTAs - Only on public pages */}
+            {!isAdminOrAuthRoute && <MobileBottomNav />}
 
             {/* Cart Slide-Over Drawer */}
             <CartDrawer />

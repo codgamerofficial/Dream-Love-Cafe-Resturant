@@ -21,7 +21,11 @@ export default function MenuPage() {
   const { category: urlCategory } = useLocalSearchParams<{ category?: string }>();
   const { width } = useWindowDimensions();
   const { categories, menuItems } = useSettings();
-  const isDesktop = width >= 768;
+
+  const isSmallMobile = width < 380;
+  const isMobile = width < 600;
+  const isTablet = width >= 600 && width < 900;
+  const isDesktop = width >= 900;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory || 'all');
@@ -74,17 +78,17 @@ export default function MenuPage() {
       <View style={styles.pageHeader}>
         <View style={styles.headerInner}>
           <Text style={styles.preTitle}>DREAM LOVE CAFE & RESTAURANT</Text>
-          <Text style={styles.pageTitle}>Complete Digital Menu</Text>
-          <Text style={styles.pageSubtitle}>
-            Freshly prepared Indian, Tandoori, Chinese, and Biryani specialties. Select items to create your WhatsApp order.
+          <Text style={[styles.pageTitle, isMobile && styles.pageTitleMobile]}>Digital Menu</Text>
+          <Text style={[styles.pageSubtitle, isMobile && styles.pageSubtitleMobile]}>
+            Explore our authentic selection of Indian curries, tandoori kebabs, slow-cooked biryanis, Chinese wok specialties, and refreshing drinks.
           </Text>
 
           {/* Live Search Bar */}
           <View style={styles.searchBarContainer}>
-            <Search size={18} color={COLORS.textMuted} style={styles.searchIcon} />
+            <Search size={16} color={COLORS.textMuted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search dishes (e.g. Biriyani, Chicken Vorta, Naan, Soup)..."
+              placeholder="Search dishes (e.g. Biriyani, Chicken Vorta)..."
               placeholderTextColor={COLORS.textSubtle}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -110,7 +114,7 @@ export default function MenuPage() {
             onPress={() => setSelectedCategory('all')}
           >
             <Text style={[styles.categoryTabText, selectedCategory === 'all' && styles.categoryTabTextActive]}>
-              All Categories ({menuItems.length})
+              All Dishes ({menuItems.length})
             </Text>
           </TouchableOpacity>
 
@@ -168,9 +172,9 @@ export default function MenuPage() {
               onPress={() => setOnlyFeatured(!onlyFeatured)}
             >
               <View style={[styles.checkbox, onlyFeatured && styles.checkboxChecked]}>
-                {onlyFeatured && <Check size={12} color={COLORS.background} />}
+                {onlyFeatured && <Check size={11} color="#FFFFFF" />}
               </View>
-              <Text style={styles.checkboxLabel}>Chef Specials Only</Text>
+              <Text style={styles.checkboxLabel}>Specials Only</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -178,9 +182,9 @@ export default function MenuPage() {
               onPress={() => setOnlyAvailable(!onlyAvailable)}
             >
               <View style={[styles.checkbox, onlyAvailable && styles.checkboxChecked]}>
-                {onlyAvailable && <Check size={12} color={COLORS.background} />}
+                {onlyAvailable && <Check size={11} color="#FFFFFF" />}
               </View>
-              <Text style={styles.checkboxLabel}>In Stock Only</Text>
+              <Text style={styles.checkboxLabel}>In Stock</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -197,14 +201,21 @@ export default function MenuPage() {
 
           {filteredItems.length === 0 ? (
             <View style={styles.emptyState}>
-              <Utensils size={48} color={COLORS.textSubtle} style={{ marginBottom: 12 }} />
+              <Utensils size={40} color={COLORS.textSubtle} style={{ marginBottom: 10 }} />
               <Text style={styles.emptyTitle}>No dishes found</Text>
               <Text style={styles.emptySubtitle}>Try adjusting your search terms or filters to explore more items.</Text>
             </View>
           ) : (
-            <View style={[styles.cardGrid, !isDesktop && styles.cardGridMobile]}>
+            <View style={styles.cardGrid}>
               {filteredItems.map((item) => (
-                <View key={item.id} style={[styles.gridColumn, !isDesktop && styles.gridColumnMobile]}>
+                <View 
+                  key={item.id} 
+                  style={[
+                    styles.gridColumn,
+                    isMobile && styles.gridColumnMobile,
+                    isTablet && styles.gridColumnTablet
+                  ]}
+                >
                   <MenuCard item={item} />
                 </View>
               ))}
@@ -223,38 +234,45 @@ const styles = StyleSheet.create({
   },
   pageHeader: {
     backgroundColor: COLORS.surface,
-    paddingVertical: SPACING.xxl,
+    paddingVertical: SPACING.xl,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   headerInner: {
-    maxWidth: 900,
+    maxWidth: 820,
     width: '100%',
     alignSelf: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
   },
   preTitle: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
-    color: COLORS.copper,
-    letterSpacing: 2.5,
-    marginBottom: 6,
+    color: COLORS.brandTurquoise,
+    letterSpacing: 2,
+    marginBottom: 4,
   },
   pageTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  pageTitleMobile: {
+    fontSize: 24,
   },
   pageSubtitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: SPACING.lg,
+    lineHeight: 19,
+    marginBottom: SPACING.md,
+  },
+  pageSubtitleMobile: {
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   searchBarContainer: {
     flexDirection: 'row',
@@ -263,24 +281,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     width: '100%',
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     color: COLORS.cream,
-    fontSize: 14,
+    fontSize: 13.5,
   },
   clearSearchBtn: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   clearSearchText: {
-    color: COLORS.copper,
-    fontSize: 12,
+    color: COLORS.brandTurquoise,
+    fontSize: 11.5,
     fontWeight: '600',
   },
 
@@ -293,29 +311,29 @@ const styles = StyleSheet.create({
   },
   categoryBarContent: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    gap: 10,
+    paddingVertical: 10,
+    gap: 8,
   },
   categoryTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   categoryTabActive: {
-    backgroundColor: COLORS.copper,
-    borderColor: COLORS.copper,
+    backgroundColor: COLORS.brandGreen,
+    borderColor: COLORS.brandGreen,
   },
   categoryTabText: {
     color: COLORS.textMuted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   categoryTabTextActive: {
-    color: COLORS.background,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   // Filter Control Bar
@@ -323,10 +341,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   filterInner: {
-    maxWidth: 1280,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: SPACING.md,
@@ -334,17 +352,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 10,
   },
   vegToggleGroup: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
@@ -362,7 +380,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.nonVegRed,
   },
   filterChipText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: COLORS.textMuted,
     fontWeight: '600',
   },
@@ -380,96 +398,89 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: COLORS.vegGreen,
-    marginRight: 6,
+    marginRight: 5,
   },
   nonVegDotSmall: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: COLORS.nonVegRed,
-    marginRight: 6,
+    marginRight: 5,
   },
   checkboxGroup: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
   checkboxItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   checkbox: {
-    width: 16,
-    height: 16,
+    width: 15,
+    height: 15,
     borderRadius: 3,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    marginRight: 6,
+    marginRight: 5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
   },
   checkboxChecked: {
-    backgroundColor: COLORS.copper,
-    borderColor: COLORS.copper,
+    backgroundColor: COLORS.brandHeart,
+    borderColor: COLORS.brandHeart,
   },
   checkboxLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: COLORS.creamMuted,
   },
 
-  // Scroll Grid Body
+  // Grid Body
   menuScroll: {
     flex: 1,
-  },
-  menuScrollContent: {
-    paddingVertical: SPACING.xl,
+    paddingVertical: SPACING.lg,
   },
   menuSectionInner: {
-    maxWidth: 1280,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: SPACING.md,
   },
   resultSummaryRow: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   resultSummaryText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSubtle,
   },
   cardGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -10,
-  },
-  cardGridMobile: {
-    flexDirection: 'column',
-    marginHorizontal: 0,
+    gap: 12,
   },
   gridColumn: {
-    width: '33.33%',
-    paddingHorizontal: 10,
-    marginBottom: 20,
+    width: '32%',
+  },
+  gridColumnTablet: {
+    width: '48.5%',
   },
   gridColumnMobile: {
     width: '100%',
-    paddingHorizontal: 0,
-    marginBottom: 16,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.xxxl,
+    paddingVertical: SPACING.xxl,
   },
   emptyTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 20,
+    fontSize: 18,
     color: COLORS.cream,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
