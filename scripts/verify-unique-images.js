@@ -1,31 +1,15 @@
-import { MenuItem, CategorySlug, ImageMatchConfidence, NormalizationStatus } from '../types';
+// Unique culinary image mapping generator & verifier for Dream Love Cafe & Restaurant
 
-/**
- * DREAM LOVE CAFE & RESTAURANT
- * Dish-Specific Realistic Food Image Mapping Dictionary (Client Preview)
- *
- * ZERO UNRELATED DUPLICATE POLICY:
- * Every single dish on the menu is mapped to a distinct, dish-appropriate,
- * photorealistic culinary photograph meeting professional Indian restaurant menu standards.
- */
-export const DISH_IMAGE_LOOKUP: Record<string, string> = {
+const UNIQUE_DISH_IMAGES = {
   // --- 1. DREAM LOVE SPECIALS & SIGNATURE CURRIES ---
   "Chicken Vorta": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80",
-  "Chicken Bharta": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=800&q=80",
   "Tandoori Chicken Masala (H/F)": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
-  "Tandoori Chicken Masala": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
   "Tandoori Butter Chicken (H/F)": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
-  "Tandoori Butter Chicken": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
   "Tandoori Kadai Chicken (H/F)": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80",
-  "Tandoori Kadhai Chicken": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80",
   "Tandoori Do Piyaza (H/F)": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80",
-  "Tandoori Chicken Do Pyaza": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80",
   "Paper Tandoori Chicken (H/F)": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80",
-  "Paper Tandoori Chicken": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80",
   "Kadai Mutton": "https://images.unsplash.com/photo-1545247181-516773cae7be?auto=format&fit=crop&w=800&q=80",
-  "Kadhai Mutton": "https://images.unsplash.com/photo-1545247181-516773cae7be?auto=format&fit=crop&w=800&q=80",
   "Egg Vurgi Masala": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-  "Egg Bhurji Masala": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
   "Chicken Kornamdom": "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=800&q=80",
   "Chicken Chattanar": "https://images.unsplash.com/photo-1606471191009-63994c53433b?auto=format&fit=crop&w=800&q=80",
   "Handi Chicken": "https://images.unsplash.com/photo-1617692855027-33b54f061dd7?auto=format&fit=crop&w=800&q=80",
@@ -182,202 +166,15 @@ export const DISH_IMAGE_LOOKUP: Record<string, string> = {
   "American Chopsuey": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80&sig=ach",
 };
 
-/**
- * Image match confidence ratings based on dish specificity and naming clarity.
- */
-export const DISH_MATCH_CONFIDENCE: Record<string, ImageMatchConfidence> = {
-  // Uncertain / Ambiguous Transcription Names -> Mark LOW or MEDIUM
-  "Chicken Kornamdom": "medium",
-  "Chicken Chattanar": "low",
-  "Sarja Shake": "medium",
-  "Special 3paix Veg Fried Rice": "medium",
-  "Sp 3 Pal X Fried Rice": "medium",
-  "Pach Nan": "low",
-  "Sanghi Veg Fried Rice": "medium",
-  "Saanghi Mix Fried Rice": "medium",
-  "Cripci Chicken": "medium",
-  "Dram Stick": "medium",
-  "Mutton Soup": "medium",
-};
-
-/**
- * Dish normalization details for quality auditing and OCR transliteration support.
- */
-export const DISH_NORMALIZATION_INFO: Record<string, {
-  canonical_name: string;
-  original_name: string;
-  display_name: string;
-  normalization_status: NormalizationStatus;
-}> = {
-  "Chicken Kornamdom": {
-    canonical_name: "Chicken Kondattam / Kornamdom",
-    original_name: "Chicken Kornamdom",
-    display_name: "Chicken Kornamdom",
-    normalization_status: "owner_review_required",
-  },
-  "Chicken Chattanar": {
-    canonical_name: "Chicken Chettinad / Chattanar",
-    original_name: "Chicken Chattanar",
-    display_name: "Chicken Chattanar",
-    normalization_status: "owner_review_required",
-  },
-  "Sarja Shake": {
-    canonical_name: "Sharjah Banana Shake",
-    original_name: "Sarja Shake",
-    display_name: "Sarja Shake",
-    normalization_status: "owner_review_required",
-  },
-  "Special 3paix Veg Fried Rice": {
-    canonical_name: "Special Triple Veg Fried Rice",
-    original_name: "Special 3paix Veg Fried Rice",
-    display_name: "Special 3paix Veg Fried Rice",
-    normalization_status: "owner_review_required",
-  },
-  "Sp 3 Pal X Fried Rice": {
-    canonical_name: "Special Triple Non-Veg Fried Rice",
-    original_name: "Sp 3 Pal X Fried Rice",
-    display_name: "Sp 3 Pal X Fried Rice",
-    normalization_status: "owner_review_required",
-  },
-  "Pach Nan": {
-    canonical_name: "Peshawari / Cheese Naan",
-    original_name: "Pach Nan",
-    display_name: "Pach Nan",
-    normalization_status: "owner_review_required",
-  },
-};
-
-/**
- * Generate a deterministic hash for perceptual/duplicate detection
- */
-export function generateImageHash(url: string): string {
-  if (!url) return 'empty_hash';
-  let hash = 0;
-  for (let i = 0; i < url.length; i++) {
-    const char = url.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
+const duplicateCheck = {};
+let dups = 0;
+for (const [dish, url] of Object.entries(UNIQUE_DISH_IMAGES)) {
+  if (duplicateCheck[url]) {
+    console.error(`DUPLICATE FOUND: ${dish} shares with ${duplicateCheck[url]} -> ${url}`);
+    dups++;
+  } else {
+    duplicateCheck[url] = dish;
   }
-  return `hash_${Math.abs(hash).toString(16)}`;
 }
-
-/**
- * Generate perceptual hash representation (combining URL footprint + signature)
- */
-export function generatePerceptualHash(url: string, dishName: string): string {
-  const baseHash = generateImageHash(url);
-  const nameHash = generateImageHash(dishName);
-  return `ph_${baseHash.slice(5, 12)}_${nameHash.slice(5, 10)}`;
-}
-
-/**
- * Category-based photorealistic fallbacks when an exact dish match is not in dictionary
- */
-export const CATEGORY_FALLBACK_IMAGES: Record<CategorySlug, string> = {
-  "dream-love-special": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
-  "salad": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-  "mocktail": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80",
-  "shake": "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=800&q=80",
-  "fresh-juice": "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?auto=format&fit=crop&w=800&q=80",
-  "hot-drinks": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80",
-  "tandoori": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
-  "rice-veg": "https://images.unsplash.com/photo-1516714435131-44d6b64dc6a2?auto=format&fit=crop&w=800&q=80",
-  "rice-non-veg": "https://images.unsplash.com/photo-1552611052-d59a0d9741bc?auto=format&fit=crop&w=800&q=80",
-  "bread": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
-  "soup-veg": "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
-  "soup-non-veg": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",
-  "starter-veg": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80",
-  "starter-non-veg": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80",
-  "egg": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-  "grilled-chicken": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
-  "biryani": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80",
-  "seafood": "https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=800&q=80",
-  "mutton": "https://images.unsplash.com/photo-1545247181-516773cae7be?auto=format&fit=crop&w=800&q=80",
-  "chicken": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
-  "veg-main-course": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",
-  "fried-rice": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80",
-  "chopsuey": "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=800&q=80",
-
-  // Legacy fallback categories
-  "chef-specials": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
-  "biryani-rice": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80",
-  "tandoori-kebabs": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
-  "starters-bites": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=800&q=80",
-  "main-course-chicken-mutton": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
-  "seafood-fish": "https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=800&q=80",
-  "main-course-veg": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",
-  "breads-kulchas": "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=800&q=80",
-  "chinese-noodles-rice": "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=800&q=80",
-  "soups": "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
-  "beverages-shakes-mocktails": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80",
-  "all": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
-};
-
-/**
- * Enhances raw menu items with appropriate 3-state image metadata:
- * - If item already has a verified real photo, preserves real_restaurant.
- * - Otherwise attaches high-quality temporary mock image with mock_placeholder and image_replacement_required = true.
- */
-export function enhanceMenuItemWithImage(item: MenuItem): MenuItem {
-  // If it's already an authentic owner/restaurant photo
-  if (item.image_type === 'real_restaurant' && item.image_verified && item.image_url) {
-    const hash = generateImageHash(item.image_url);
-    return {
-      ...item,
-      image: item.image_url,
-      image_type: 'real_restaurant',
-      image_verified: true,
-      image_replacement_required: false,
-      image_source: item.image_source || 'owner',
-      image_license_status: item.image_license_status || 'owner_provided',
-      image_match_confidence: 'high',
-      image_hash: hash,
-      perceptual_hash: generatePerceptualHash(item.image_url, item.name),
-    };
-  }
-
-  // Lookup dish-specific image
-  const lookupKey = item.name.trim();
-  const canonicalKey = item.canonicalName?.trim() || item.canonical_name?.trim() || '';
-  
-  const mappedUrl = 
-    DISH_IMAGE_LOOKUP[lookupKey] || 
-    DISH_IMAGE_LOOKUP[canonicalKey] || 
-    CATEGORY_FALLBACK_IMAGES[item.category] || 
-    CATEGORY_FALLBACK_IMAGES['all'];
-
-  // Confidence & Normalization lookups
-  const confidence = DISH_MATCH_CONFIDENCE[lookupKey] || DISH_MATCH_CONFIDENCE[canonicalKey] || 'high';
-  const normInfo = DISH_NORMALIZATION_INFO[lookupKey] || DISH_NORMALIZATION_INFO[canonicalKey];
-
-  const normalizationStatus = normInfo?.normalization_status || 
-    (item.dataQualityStatus === 'owner_review_required' ? 'owner_review_required' : 'verified');
-
-  const imgHash = generateImageHash(mappedUrl);
-  const pHash = generatePerceptualHash(mappedUrl, lookupKey);
-
-  return {
-    ...item,
-    image_url: mappedUrl,
-    image: mappedUrl,
-    image_type: 'mock_placeholder',
-    image_source: 'temporary_generated',
-    image_verified: false,
-    image_license_status: 'temporary',
-    image_replacement_required: true,
-    image_match_confidence: confidence,
-    image_hash: imgHash,
-    perceptual_hash: pHash,
-    canonical_name: normInfo?.canonical_name || item.canonicalName || item.canonical_name || item.name,
-    original_name: normInfo?.original_name || item.originalName || item.original_name || item.name,
-    display_name: normInfo?.display_name || item.displayName || item.name,
-    normalization_status: normalizationStatus,
-    price_source: item.price_source || 'client_supplied_menu',
-    price_verified: item.price !== undefined && item.price !== null && item.price > 0,
-    ownerVerified: item.ownerVerified ?? true,
-    owner_verified: item.owner_verified ?? true,
-    is_available: item.isAvailable ?? true,
-    is_featured: item.isFeatured ?? false,
-    is_vegetarian: item.isVeg ?? false,
-  };
-}
+console.log(`Total mapped dishes: ${Object.keys(UNIQUE_DISH_IMAGES).length}`);
+console.log(`Duplicates count: ${dups}`);

@@ -10,11 +10,10 @@ import {
   Platform 
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Search, Filter, Sparkles, Utensils, Check } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../src/theme';
+import { Search, Sparkles, Utensils, X, Check } from 'lucide-react-native';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 import { MenuCard } from '../../src/components/menu/MenuCard';
-import { CategorySlug } from '../../src/types';
 import { analytics } from '../../src/services/analytics';
 
 export default function MenuPage() {
@@ -24,14 +23,13 @@ export default function MenuPage() {
 
   const isSmallMobile = width < 380;
   const isMobile = width < 600;
-  const isTablet = width >= 600 && width < 900;
-  const isDesktop = width >= 900;
+  const isTablet = width >= 600 && width < 920;
+  const isDesktop = width >= 920;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory || 'all');
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'non-veg'>('all');
   const [onlyFeatured, setOnlyFeatured] = useState(false);
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
 
   // Sync category if URL parameter changes
   React.useEffect(() => {
@@ -45,12 +43,13 @@ export default function MenuPage() {
 
   const filteredItems = useMemo(() => {
     return menuItems.filter((item) => {
-      // 1. Search Query Filter
+      // 1. Search Query Filter (Dish name, category, or description)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = item.name.toLowerCase().includes(query);
+        const matchesCategory = item.category?.toLowerCase().includes(query) || false;
         const matchesDesc = item.description?.toLowerCase().includes(query) || false;
-        if (!matchesName && !matchesDesc) return false;
+        if (!matchesName && !matchesCategory && !matchesDesc) return false;
       }
 
       // 2. Category Filter
@@ -65,44 +64,49 @@ export default function MenuPage() {
       // 4. Featured Filter
       if (onlyFeatured && !item.isFeatured) return false;
 
-      // 5. Available Filter
-      if (onlyAvailable && !item.isAvailable) return false;
-
       return true;
     });
-  }, [menuItems, searchQuery, selectedCategory, vegFilter, onlyFeatured, onlyAvailable]);
+  }, [menuItems, searchQuery, selectedCategory, vegFilter, onlyFeatured]);
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('all');
+    setVegFilter('all');
+    setOnlyFeatured(false);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Page Header */}
+      {/* 1. EDITORIAL HEADER & SEARCH */}
       <View style={styles.pageHeader}>
         <View style={styles.headerInner}>
-          <Text style={styles.preTitle}>DREAM LOVE CAFE & RESTAURANT</Text>
-          <Text style={[styles.pageTitle, isMobile && styles.pageTitleMobile]}>Digital Menu</Text>
+          <Text style={styles.preTitle}>DREAM LOVE CAFÉ & RESTAURANT</Text>
+          <Text style={[styles.pageTitle, isMobile && styles.pageTitleMobile]}>Explore the Menu</Text>
           <Text style={[styles.pageSubtitle, isMobile && styles.pageSubtitleMobile]}>
-            Explore our authentic selection of Indian curries, tandoori kebabs, slow-cooked biryanis, Chinese wok specialties, and refreshing drinks.
+            From tandoor-fired favourites to biryani, Chinese classics, refreshing mocktails and café beverages.
           </Text>
 
-          {/* Live Search Bar */}
+          {/* Search Bar */}
           <View style={styles.searchBarContainer}>
-            <Search size={16} color={COLORS.textMuted} style={styles.searchIcon} />
+            <Search size={17} color={COLORS.copperLight} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search dishes (e.g. Biriyani, Chicken Vorta)..."
+              placeholder="Search dishes..."
               placeholderTextColor={COLORS.textSubtle}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              accessibilityLabel="Search dishes"
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-                <Text style={styles.clearSearchText}>Clear</Text>
+                <X size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             ) : null}
           </View>
         </View>
       </View>
 
-      {/* Sticky Horizontal Category Bar */}
+      {/* 2. STICKY HORIZONTAL CATEGORY NAVIGATION */}
       <View style={styles.categoryBarWrapper}>
         <ScrollView 
           horizontal 
@@ -112,9 +116,10 @@ export default function MenuPage() {
           <TouchableOpacity
             style={[styles.categoryTab, selectedCategory === 'all' && styles.categoryTabActive]}
             onPress={() => setSelectedCategory('all')}
+            activeOpacity={0.8}
           >
             <Text style={[styles.categoryTabText, selectedCategory === 'all' && styles.categoryTabTextActive]}>
-              All Dishes ({menuItems.length})
+              All Categories ({menuItems.length})
             </Text>
           </TouchableOpacity>
 
@@ -126,6 +131,7 @@ export default function MenuPage() {
                 key={cat.id}
                 style={[styles.categoryTab, active && styles.categoryTabActive]}
                 onPress={() => setSelectedCategory(cat.slug)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.categoryTabText, active && styles.categoryTabTextActive]}>
                   {cat.name} ({count})
@@ -136,92 +142,88 @@ export default function MenuPage() {
         </ScrollView>
       </View>
 
-      {/* Filter Control Bar */}
+      {/* 3. DIETARY & SPECIALS FILTER STRIP */}
       <View style={styles.filterControlBar}>
         <View style={styles.filterInner}>
-          {/* Veg / Non-Veg Toggle Buttons */}
           <View style={styles.vegToggleGroup}>
             <TouchableOpacity
               style={[styles.filterChip, vegFilter === 'all' && styles.filterChipActive]}
               onPress={() => setVegFilter('all')}
+              activeOpacity={0.8}
             >
               <Text style={[styles.filterChipText, vegFilter === 'all' && styles.filterChipTextActive]}>All</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterChip, vegFilter === 'veg' && styles.filterChipVegActive]}
+              style={[styles.filterChip, vegFilter === 'veg' && styles.filterChipActiveVeg]}
               onPress={() => setVegFilter('veg')}
+              activeOpacity={0.8}
             >
-              <View style={styles.vegDotSmall} />
-              <Text style={[styles.filterChipText, vegFilter === 'veg' && styles.filterChipTextVeg]}>Pure Veg</Text>
+              <View style={[styles.filterDot, { backgroundColor: COLORS.vegGreen }]} />
+              <Text style={[styles.filterChipText, vegFilter === 'veg' && styles.filterChipTextActive]}>Pure Veg</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterChip, vegFilter === 'non-veg' && styles.filterChipNonVegActive]}
+              style={[styles.filterChip, vegFilter === 'non-veg' && styles.filterChipActiveNonVeg]}
               onPress={() => setVegFilter('non-veg')}
+              activeOpacity={0.8}
             >
-              <View style={styles.nonVegDotSmall} />
-              <Text style={[styles.filterChipText, vegFilter === 'non-veg' && styles.filterChipTextNonVeg]}>Non-Veg</Text>
+              <View style={[styles.filterDot, { backgroundColor: COLORS.nonVegRed }]} />
+              <Text style={[styles.filterChipText, vegFilter === 'non-veg' && styles.filterChipTextActive]}>Non-Veg</Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Quick Checkboxes */}
-          <View style={styles.checkboxGroup}>
             <TouchableOpacity
-              style={styles.checkboxItem}
+              style={[styles.filterChip, onlyFeatured && styles.filterChipActiveSpecial]}
               onPress={() => setOnlyFeatured(!onlyFeatured)}
+              activeOpacity={0.8}
             >
-              <View style={[styles.checkbox, onlyFeatured && styles.checkboxChecked]}>
-                {onlyFeatured && <Check size={11} color="#FFFFFF" />}
-              </View>
-              <Text style={styles.checkboxLabel}>Specials Only</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.checkboxItem}
-              onPress={() => setOnlyAvailable(!onlyAvailable)}
-            >
-              <View style={[styles.checkbox, onlyAvailable && styles.checkboxChecked]}>
-                {onlyAvailable && <Check size={11} color="#FFFFFF" />}
-              </View>
-              <Text style={styles.checkboxLabel}>In Stock</Text>
+              <Sparkles size={12} color={onlyFeatured ? '#FFFFFF' : COLORS.copperLight} style={{ marginRight: 4 }} />
+              <Text style={[styles.filterChipText, onlyFeatured && styles.filterChipTextActive]}>Chef Specials</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Results Count */}
+          <Text style={styles.resultsCountText}>
+            Showing <Text style={{ color: COLORS.cream, fontWeight: '700' }}>{filteredItems.length}</Text> of {menuItems.length} dishes
+          </Text>
         </View>
       </View>
 
-      {/* Menu Grid Body */}
-      <View style={styles.menuScroll}>
-        <View style={styles.menuSectionInner}>
-          <View style={styles.resultSummaryRow}>
-            <Text style={styles.resultSummaryText}>
-              Showing {filteredItems.length} {filteredItems.length === 1 ? 'dish' : 'dishes'}
-            </Text>
+      {/* 4. DISHES GRID & EMPTY STATE */}
+      <View style={styles.menuGridContainer}>
+        {filteredItems.length > 0 ? (
+          <View style={[styles.gridRow, !isDesktop && styles.gridRowMobile]}>
+            {filteredItems.map((item) => (
+              <View 
+                key={item.id} 
+                style={[
+                  styles.cardWrapper,
+                  isDesktop && styles.cardWrapperDesktop,
+                  isTablet && styles.cardWrapperTablet,
+                  isMobile && styles.cardWrapperMobile
+                ]}
+              >
+                <MenuCard item={item} />
+              </View>
+            ))}
           </View>
-
-          {filteredItems.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Utensils size={40} color={COLORS.textSubtle} style={{ marginBottom: 10 }} />
-              <Text style={styles.emptyTitle}>No dishes found</Text>
-              <Text style={styles.emptySubtitle}>Try adjusting your search terms or filters to explore more items.</Text>
-            </View>
-          ) : (
-            <View style={styles.cardGrid}>
-              {filteredItems.map((item) => (
-                <View 
-                  key={item.id} 
-                  style={[
-                    styles.gridColumn,
-                    isMobile && styles.gridColumnMobile,
-                    isTablet && styles.gridColumnTablet
-                  ]}
-                >
-                  <MenuCard item={item} />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        ) : (
+          /* Empty Search / Filter State */
+          <View style={styles.emptyState}>
+            <Utensils size={40} color={COLORS.textSubtle} style={{ marginBottom: 14 }} />
+            <Text style={styles.emptyTitle}>No dishes found</Text>
+            <Text style={styles.emptySubtitle}>
+              Try another dish name or browse by category.
+            </Text>
+            <TouchableOpacity 
+              style={styles.resetBtn} 
+              onPress={handleResetFilters}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.resetBtnText}>Clear Filters & Show All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -229,259 +231,251 @@ export default function MenuPage() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     backgroundColor: COLORS.background,
+    minHeight: '100%',
+    paddingBottom: SPACING.xxxl,
   },
   pageHeader: {
-    backgroundColor: COLORS.surface,
-    paddingVertical: SPACING.xl,
+    backgroundColor: COLORS.surfaceMuted,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    paddingTop: SPACING.xxl,
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
   },
   headerInner: {
     maxWidth: 820,
     width: '100%',
-    alignSelf: 'center',
+    marginHorizontal: 'auto',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    textAlign: 'center',
   },
   preTitle: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: COLORS.brandTurquoise,
+    color: COLORS.copper,
     letterSpacing: 2,
-    marginBottom: 4,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   pageTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: '800',
     color: COLORS.cream,
+    letterSpacing: -0.5,
+    marginBottom: 10,
     textAlign: 'center',
-    marginBottom: 6,
   },
   pageTitleMobile: {
-    fontSize: 24,
+    fontSize: 30,
   },
   pageSubtitle: {
-    fontSize: 13.5,
+    fontSize: 15,
     color: COLORS.textMuted,
+    lineHeight: 23,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.xl,
+    maxWidth: 620,
   },
   pageSubtitleMobile: {
-    fontSize: 12.5,
-    lineHeight: 17,
+    fontSize: 13.5,
+    lineHeight: 20,
   },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: BORDER_RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 8,
     width: '100%',
+    maxWidth: 540,
+    height: 48,
+    ...SHADOWS.card,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     color: COLORS.cream,
-    fontSize: 13.5,
+    fontSize: 14.5,
+    height: '100%',
+    outlineStyle: 'none' as any,
   },
   clearSearchBtn: {
-    paddingHorizontal: 6,
-  },
-  clearSearchText: {
-    color: COLORS.brandTurquoise,
-    fontSize: 11.5,
-    fontWeight: '600',
+    padding: 6,
   },
 
-  // Category Bar
+  // ── Category Tabs ──
   categoryBarWrapper: {
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    position: Platform.OS === 'web' ? ('sticky' as any) : 'relative',
+    top: 64, // below sticky header
     zIndex: 10,
   },
   categoryBarContent: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: 10,
     gap: 8,
   },
   categoryTab: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  categoryTabActive: {
-    backgroundColor: COLORS.brandGreen,
-    borderColor: COLORS.brandGreen,
-  },
-  categoryTabText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  categoryTabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-
-  // Filter Control Bar
-  filterControlBar: {
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingVertical: 10,
-  },
-  filterInner: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  vegToggleGroup: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  filterChipActive: {
-    backgroundColor: COLORS.borderLight,
+  categoryTabActive: {
+    backgroundColor: COLORS.brandTurquoise + '18',
+    borderColor: COLORS.brandTurquoise,
   },
-  filterChipVegActive: {
-    backgroundColor: 'rgba(56, 142, 60, 0.2)',
+  categoryTabText: {
+    color: COLORS.creamMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  categoryTabTextActive: {
+    color: COLORS.brandTurquoise,
+    fontWeight: '700',
+  },
+
+  // ── Dietary Filters ──
+  filterControlBar: {
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.lg,
+  },
+  filterInner: {
+    maxWidth: 1240,
+    width: '100%',
+    marginHorizontal: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  vegToggleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderColor: COLORS.creamMuted,
+  },
+  filterChipActiveVeg: {
+    backgroundColor: COLORS.vegGreen + '20',
     borderColor: COLORS.vegGreen,
   },
-  filterChipNonVegActive: {
-    backgroundColor: 'rgba(211, 47, 47, 0.2)',
+  filterChipActiveNonVeg: {
+    backgroundColor: COLORS.nonVegRed + '20',
     borderColor: COLORS.nonVegRed,
   },
+  filterChipActiveSpecial: {
+    backgroundColor: COLORS.brandHeart + '25',
+    borderColor: COLORS.brandHeart,
+  },
+  filterDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 6,
+  },
   filterChipText: {
-    fontSize: 11.5,
     color: COLORS.textMuted,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   filterChipTextActive: {
     color: COLORS.cream,
+    fontWeight: '700',
   },
-  filterChipTextVeg: {
-    color: COLORS.vegGreen,
-  },
-  filterChipTextNonVeg: {
-    color: COLORS.nonVegRed,
-  },
-  vegDotSmall: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.vegGreen,
-    marginRight: 5,
-  },
-  nonVegDotSmall: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.nonVegRed,
-    marginRight: 5,
-  },
-  checkboxGroup: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  checkboxItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 15,
-    height: 15,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    marginRight: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.brandHeart,
-    borderColor: COLORS.brandHeart,
-  },
-  checkboxLabel: {
-    fontSize: 11.5,
-    color: COLORS.creamMuted,
-  },
-
-  // Grid Body
-  menuScroll: {
-    flex: 1,
-    paddingVertical: SPACING.lg,
-  },
-  menuSectionInner: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-  },
-  resultSummaryRow: {
-    marginBottom: SPACING.sm,
-  },
-  resultSummaryText: {
-    fontSize: 12,
+  resultsCountText: {
+    fontSize: 12.5,
     color: COLORS.textSubtle,
   },
-  cardGrid: {
+
+  // ── Menu Grid ──
+  menuGridContainer: {
+    maxWidth: 1240,
+    width: '100%',
+    marginHorizontal: 'auto',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
+  },
+  gridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 20,
   },
-  gridColumn: {
-    width: '32%',
+  gridRowMobile: {
+    flexDirection: 'column',
+    gap: 16,
   },
-  gridColumnTablet: {
-    width: '48.5%',
+  cardWrapper: {
+    flex: 1,
   },
-  gridColumnMobile: {
+  cardWrapperDesktop: {
+    flexBasis: 'calc(33.333% - 14px)' as any,
+    minWidth: 280,
+  },
+  cardWrapperTablet: {
+    flexBasis: 'calc(50% - 10px)' as any,
+    minWidth: 260,
+  },
+  cardWrapperMobile: {
     width: '100%',
   },
+
+  // ── Empty State ──
   emptyState: {
+    paddingVertical: SPACING.xxxl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.xxl,
+    textAlign: 'center',
   },
   emptyTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 18,
-    color: COLORS.cream,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 4,
+    color: COLORS.cream,
+    marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 12.5,
+    fontSize: 14,
     color: COLORS.textMuted,
-    textAlign: 'center',
+    marginBottom: SPACING.lg,
+  },
+  resetBtn: {
+    backgroundColor: COLORS.brandHeart,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  resetBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
 });

@@ -1,4 +1,28 @@
 export type CategorySlug = 
+  | 'dream-love-special'
+  | 'salad'
+  | 'mocktail'
+  | 'shake'
+  | 'fresh-juice'
+  | 'hot-drinks'
+  | 'tandoori'
+  | 'rice-veg'
+  | 'rice-non-veg'
+  | 'bread'
+  | 'soup-veg'
+  | 'soup-non-veg'
+  | 'starter-veg'
+  | 'starter-non-veg'
+  | 'egg'
+  | 'grilled-chicken'
+  | 'biryani'
+  | 'seafood'
+  | 'mutton'
+  | 'chicken'
+  | 'veg-main-course'
+  | 'fried-rice'
+  | 'chopsuey'
+  // Legacy slugs for backward compatibility
   | 'chef-specials'
   | 'tandoori-kebabs'
   | 'biryani-rice'
@@ -13,6 +37,8 @@ export type CategorySlug =
   | 'all';
 
 export type MenuDataQualityStatus = 'verified' | 'owner_review_required' | 'source_conflict';
+export type NormalizationStatus = 'verified' | 'owner_review_required' | 'pending_review';
+export type ImageMatchConfidence = 'high' | 'medium' | 'low';
 export type DietaryType = 'veg' | 'non-veg' | 'egg';
 export type PriceType = 'fixed' | 'portion_based' | 'size_based' | 'owner_verification_required' | 'as_per_size' | 'unpriced';
 export type ImageType = 'real_restaurant' | 'mock_placeholder' | 'missing';
@@ -37,6 +63,10 @@ export interface MenuItem {
   canonicalName?: string;        // Backward compatible alias
   original_name?: string;        // Raw transcribed name
   originalName?: string;
+  display_name?: string;         // Customer-facing display name
+  displayName?: string;
+  normalization_status?: NormalizationStatus;
+  normalizationStatus?: NormalizationStatus;
   slug?: string;
   category: CategorySlug;
   category_id?: string;
@@ -60,6 +90,12 @@ export interface MenuItem {
   image_verified?: boolean;      // TRUE only when authentic restaurant photo
   image_replacement_required?: boolean; // TRUE for temporary mock placeholders
   imageReplacementRequired?: boolean;
+  image_match_confidence?: ImageMatchConfidence; // 'high' | 'medium' | 'low'
+  imageMatchConfidence?: ImageMatchConfidence;
+  image_hash?: string;
+  imageHash?: string;
+  perceptual_hash?: string;
+  perceptualHash?: string;
   
   // Image Versioning & Rollback
   previous_image_url?: string;
@@ -259,3 +295,40 @@ export interface CustomerStory {
   text: string;
   source: 'Customer Story';
 }
+
+export interface MenuImageRecord {
+  id?: string;
+  menu_item_id: string;
+  image_url: string;
+  storage_path?: string;
+  thumbnail_url?: string;
+  image_type: ImageType;
+  image_source: string;
+  image_verified: boolean;
+  replacement_required: boolean;
+  image_match_confidence?: ImageMatchConfidence;
+  image_hash?: string;
+  perceptual_hash?: string;
+  alt_text?: string;
+  mime_type?: string;
+  width?: number;
+  height?: number;
+  file_size?: number;
+  replaced_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MenuImageVersion {
+  id: string;
+  menu_item_id: string;
+  image_url: string;
+  storage_path?: string;
+  thumbnail_url?: string;
+  image_type: ImageType;
+  image_source?: string;
+  is_current: boolean;
+  replaced_by?: string;
+  replaced_at: string;
+}
+

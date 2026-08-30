@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { ShoppingBag, Calendar, Menu as MenuIcon, X, ShieldCheck } from 'lucide-react-native';
+import { ShoppingBag, Calendar, Menu as MenuIcon, X, Phone, MapPin, ArrowRight } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../theme';
 import { useCart } from '../../context/CartContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -17,18 +17,23 @@ export const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const isDesktop = width >= 768;
+  const isDesktop = width >= 860;
   const isSmallMobile = width < 380;
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const handleScroll = () => {
-        setIsScrolled(window.scrollY > 20);
+        setIsScrolled(window.scrollY > 24);
       };
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
       return () => window.removeEventListener('scroll', handleScroll);
     }
   }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const navLinks = [
     { label: 'Home', href: '/' },
@@ -36,7 +41,7 @@ export const Header: React.FC = () => {
     { label: 'About', href: '/about' },
     { label: 'Gallery', href: '/gallery' },
     { label: 'Reviews', href: '/reviews' },
-    { label: 'Visit Us', href: '/contact' },
+    { label: 'Visit Us', href: '/visit' },
   ];
 
   const isActive = (href: string) => {
@@ -45,9 +50,12 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <View style={[styles.headerContainer, isScrolled && styles.headerScrolled]}>
+    <View style={[
+      styles.headerContainer, 
+      isScrolled ? styles.headerScrolled : styles.headerInitial
+    ]}>
       <View style={styles.headerContent}>
-        {/* Authentic Storefront Brand Logo */}
+        {/* Left: Authentic Storefront Brand Logo */}
         <View style={styles.logoWrapper}>
           <BrandLogo 
             variant={isDesktop ? 'primary' : 'compact'} 
@@ -55,29 +63,33 @@ export const Header: React.FC = () => {
           />
         </View>
 
-        {/* Desktop Navigation Links */}
+        {/* Center: Desktop Navigation Links with Editorial Underlines */}
         {isDesktop && (
           <View style={styles.desktopNav}>
-            {navLinks.map((link) => (
-              <TouchableOpacity
-                key={link.href}
-                onPress={() => router.push(link.href as any)}
-                style={styles.navItem}
-                accessibilityRole="link"
-                accessibilityLabel={link.label}
-              >
-                <Text style={[styles.navText, isActive(link.href) && styles.navTextActive]}>
-                  {link.label}
-                </Text>
-                {isActive(link.href) && <View style={styles.activeIndicator} />}
-              </TouchableOpacity>
-            ))}
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <TouchableOpacity
+                  key={link.href}
+                  onPress={() => router.push(link.href as any)}
+                  style={styles.navItem}
+                  accessibilityRole="link"
+                  accessibilityLabel={link.label}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.navText, active && styles.navTextActive]}>
+                    {link.label}
+                  </Text>
+                  {active && <View style={styles.activeIndicator} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
-        {/* Header Actions */}
+        {/* Right: Header Actions */}
         <View style={styles.actionsContainer}>
-          {/* Cart Icon */}
+          {/* Cart Icon with Live Item Count Badge */}
           <TouchableOpacity 
             style={styles.cartButton} 
             onPress={openCart}
@@ -85,7 +97,7 @@ export const Header: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={`Shopping cart with ${itemCount} items`}
           >
-            <ShoppingBag size={18} color={COLORS.cream} />
+            <ShoppingBag size={19} color={COLORS.cream} />
             {itemCount > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{itemCount}</Text>
@@ -94,39 +106,39 @@ export const Header: React.FC = () => {
           </TouchableOpacity>
 
           {/* Desktop Primary CTAs */}
-          {isDesktop && (
+          {isDesktop ? (
             <React.Fragment>
               <TouchableOpacity 
-                style={[styles.secondaryCta, (isActive('/book') || isActive('/bookings')) && styles.secondaryCtaActive]}
+                style={[styles.reserveCta, (isActive('/book') || isActive('/bookings')) && styles.reserveCtaActive]}
                 onPress={() => router.push('/book')}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="Reserve a table"
-                accessibilityState={{ selected: isActive('/book') || isActive('/bookings') }}
               >
-                <Calendar size={15} color={(isActive('/book') || isActive('/bookings')) ? COLORS.cream : COLORS.brandTurquoise} style={{ marginRight: 6 }} />
-                <Text style={[styles.secondaryCtaText, (isActive('/book') || isActive('/bookings')) && styles.secondaryCtaTextActive]}>Reserve</Text>
+                <Calendar size={14} color={(isActive('/book') || isActive('/bookings')) ? COLORS.cream : COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                <Text style={[styles.reserveCtaText, (isActive('/book') || isActive('/bookings')) && styles.reserveCtaTextActive]}>
+                  Reserve
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.primaryCta}
+                style={styles.orderNowCta}
                 onPress={() => router.push('/menu')}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Order now"
+                accessibilityLabel="Order now from our menu"
               >
-                <Text style={styles.primaryCtaText}>Order Now</Text>
+                <Text style={styles.orderNowCtaText}>Order Now</Text>
               </TouchableOpacity>
             </React.Fragment>
-          )}
-
-          {/* Mobile Hamburger Toggle */}
-          {!isDesktop && (
+          ) : (
+            /* Mobile Menu Hamburger Toggle */
             <TouchableOpacity
-              style={styles.menuToggle}
+              style={styles.mobileMenuToggle}
               onPress={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel="Toggle mobile menu"
+              accessibilityLabel={isMobileMenuOpen ? 'Close menu' : 'Open navigation menu'}
             >
               {isMobileMenuOpen ? (
                 <X size={22} color={COLORS.cream} />
@@ -138,56 +150,56 @@ export const Header: React.FC = () => {
         </View>
       </View>
 
-      {/* Mobile Drawer Menu Dropdown */}
+      {/* Mobile Slide-Down Dropdown Menu */}
       {!isDesktop && isMobileMenuOpen && (
-        <View style={styles.mobileDrawer}>
-          {navLinks.map((link) => (
-            <TouchableOpacity
-              key={link.href}
-              style={[styles.mobileNavItem, isActive(link.href) && styles.mobileNavItemActive]}
-              onPress={() => {
-                setIsMobileMenuOpen(false);
-                router.push(link.href as any);
-              }}
-            >
-              <Text style={[styles.mobileNavText, isActive(link.href) && styles.mobileNavTextActive]}>
-                {link.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.mobileDropdown}>
+          <View style={styles.mobileNavLinks}>
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <TouchableOpacity
+                  key={link.href}
+                  onPress={() => router.push(link.href as any)}
+                  style={[styles.mobileNavItem, active && styles.mobileNavItemActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.mobileNavText, active && styles.mobileNavTextActive]}>
+                    {link.label}
+                  </Text>
+                  <ArrowRight size={14} color={active ? COLORS.brandTurquoise : COLORS.textSubtle} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-          {/* Admin Quick Link */}
-          <TouchableOpacity
-            style={styles.mobileAdminLink}
-            onPress={() => {
-              setIsMobileMenuOpen(false);
-              router.push('/admin');
-            }}
-          >
-            <ShieldCheck size={16} color={COLORS.textMuted} style={{ marginRight: 8 }} />
-            <Text style={styles.mobileAdminText}>Owner / Admin Portal</Text>
-          </TouchableOpacity>
-
-          <View style={styles.mobileCtaRow}>
-            <TouchableOpacity
-              style={[styles.secondaryCta, { flex: 1, marginRight: 8, justifyContent: 'center' }]}
-              onPress={() => {
-                setIsMobileMenuOpen(false);
-                router.push('/book');
-              }}
+          <View style={styles.mobileActionButtons}>
+            <TouchableOpacity 
+              style={styles.mobileOrderBtn}
+              onPress={() => router.push('/menu')}
+              activeOpacity={0.85}
             >
-              <Text style={styles.secondaryCtaText}>Book Table</Text>
+              <Text style={styles.mobileOrderBtnText}>Order Now</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.primaryCta, { flex: 1, justifyContent: 'center' }]}
-              onPress={() => {
-                setIsMobileMenuOpen(false);
-                router.push('/menu');
-              }}
+            <TouchableOpacity 
+              style={styles.mobileReserveBtn}
+              onPress={() => router.push('/book')}
+              activeOpacity={0.85}
             >
-              <Text style={styles.primaryCtaText}>View Menu</Text>
+              <Calendar size={15} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+              <Text style={styles.mobileReserveBtnText}>Reserve a Table</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.mobileFooterInfo}>
+            <View style={styles.mobileInfoRow}>
+              <Phone size={13} color={COLORS.copper} style={{ marginRight: 6 }} />
+              <Text style={styles.mobileInfoText}>{settings.phone}</Text>
+            </View>
+            <View style={styles.mobileInfoRow}>
+              <MapPin size={13} color={COLORS.copper} style={{ marginRight: 6 }} />
+              <Text style={styles.mobileInfoText}>Central Bus Stand, Contai</Text>
+            </View>
           </View>
         </View>
       )}
@@ -197,80 +209,85 @@ export const Header: React.FC = () => {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    backgroundColor: COLORS.glassBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    zIndex: 1000,
-    width: '100%',
     position: Platform.OS === 'web' ? ('sticky' as any) : 'relative',
     top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    width: '100%',
+  },
+  headerInitial: {
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   headerScrolled: {
-    backgroundColor: 'rgba(18, 15, 14, 0.97)',
-    borderBottomColor: COLORS.brandGreen + '50',
-    shadowColor: '#000',
+    backgroundColor: 'rgba(18, 15, 14, 0.96)',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   headerContent: {
     maxWidth: 1240,
     width: '100%',
-    alignSelf: 'center',
+    marginHorizontal: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: Platform.OS === 'web' ? 10 : 8,
-    minHeight: 56,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
+    minHeight: 64,
   },
   logoWrapper: {
-    flexShrink: 1,
-    marginRight: 8,
+    flexShrink: 0,
   },
   desktopNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.lg,
+    gap: 28,
   },
   navItem: {
-    paddingVertical: SPACING.xs,
     position: 'relative',
+    paddingVertical: 8,
+    paddingHorizontal: 2,
   },
   navText: {
-    color: COLORS.creamMuted,
+    color: COLORS.textMuted,
     fontSize: 14,
     fontWeight: '500',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   navTextActive: {
     color: COLORS.cream,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   activeIndicator: {
     position: 'absolute',
-    bottom: -6,
-    left: 0,
-    right: 0,
+    bottom: 0,
+    left: 2,
+    right: 2,
     height: 2,
     backgroundColor: COLORS.brandTurquoise,
-    borderRadius: 2,
+    borderRadius: 1,
   },
   actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   cartButton: {
     width: 38,
     height: 38,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
+    borderColor: COLORS.borderLight,
     alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
   cartBadge: {
@@ -278,83 +295,94 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
     backgroundColor: COLORS.brandHeart,
-    borderRadius: BORDER_RADIUS.full,
-    minWidth: 17,
-    height: 17,
-    justifyContent: 'center',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
-    paddingHorizontal: 3,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   cartBadgeText: {
     color: '#FFFFFF',
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '800',
   },
-  secondaryCta: {
+  reserveCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 13,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.brandGreen,
-    backgroundColor: COLORS.brandGreen + '1A',
+    borderColor: COLORS.borderLight,
   },
-  secondaryCtaActive: {
-    backgroundColor: COLORS.brandGreen,
+  reserveCtaActive: {
+    backgroundColor: COLORS.surfaceElevated,
     borderColor: COLORS.brandTurquoise,
   },
-  secondaryCtaText: {
+  reserveCtaText: {
     color: COLORS.cream,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '600',
-    letterSpacing: 0.3,
   },
-  secondaryCtaTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+  reserveCtaTextActive: {
+    color: COLORS.brandTurquoise,
   },
-  primaryCta: {
-    paddingVertical: 7,
-    paddingHorizontal: 15,
-    borderRadius: BORDER_RADIUS.md,
+  orderNowCta: {
     backgroundColor: COLORS.brandHeart,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: COLORS.brandHeart,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
   },
-  primaryCtaText: {
+  orderNowCtaText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
-  menuToggle: {
+  mobileMenuToggle: {
     width: 38,
     height: 38,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mobileDrawer: {
+    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileDropdown: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  mobileNavLinks: {
+    marginBottom: SPACING.md,
   },
   mobileNavItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   mobileNavItemActive: {
-    borderBottomColor: COLORS.brandTurquoise,
+    borderBottomColor: COLORS.brandTurquoise + '40',
   },
   mobileNavText: {
     color: COLORS.creamMuted,
@@ -362,23 +390,52 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   mobileNavTextActive: {
-    color: COLORS.cream,
+    color: COLORS.brandTurquoise,
     fontWeight: '700',
   },
-  mobileAdminLink: {
+  mobileActionButtons: {
+    gap: 10,
+    marginBottom: SPACING.md,
+  },
+  mobileOrderBtn: {
+    backgroundColor: COLORS.brandHeart,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileOrderBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  mobileReserveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 11,
+    borderRadius: BORDER_RADIUS.md,
   },
-  mobileAdminText: {
-    color: COLORS.textMuted,
-    fontSize: 13.5,
+  mobileReserveBtnText: {
+    color: COLORS.cream,
+    fontSize: 14,
+    fontWeight: '600',
   },
-  mobileCtaRow: {
+  mobileFooterInfo: {
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: 6,
+  },
+  mobileInfoRow: {
     flexDirection: 'row',
-    marginTop: SPACING.md,
-    gap: SPACING.sm,
+    alignItems: 'center',
+  },
+  mobileInfoText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
   },
 });

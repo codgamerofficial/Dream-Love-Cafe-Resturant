@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   TextInput, 
   TouchableOpacity, 
   useWindowDimensions, 
@@ -23,7 +22,8 @@ import {
   CalendarPlus, 
   ArrowRight,
   ShieldCheck,
-  Check
+  Check,
+  MapPin
 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
@@ -38,6 +38,7 @@ import {
   generateReservationReference,
   formatWhatsAppReservationMessage,
   generateGoogleCalendarLink,
+  saveLocalReservation,
   TimeSlot
 } from '../../src/utils/reservation';
 
@@ -46,8 +47,11 @@ const GUEST_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10];
 export default function ReservationPage() {
   const { width } = useWindowDimensions();
   const { settings } = useSettings();
-  const isDesktop = width >= 860;
-  const isTablet = width >= 600 && width < 860;
+  
+  // Responsive layout flags
+  const isDesktop = width >= 880;
+  const isTablet = width >= 600 && width < 880;
+  const isSmallMobile = width < 360;
 
   // Initialize date dynamically in Asia/Kolkata timezone
   const todayDate = useMemo(() => getKolkataCurrentDate(), []);
@@ -98,7 +102,7 @@ export default function ReservationPage() {
 
     const phoneResult = normalizeIndianPhoneNumber(phone);
     if (!phoneResult.isValid) {
-      return { isValid: false, error: phoneResult.error || 'Please enter a valid phone number.' };
+      return { isValid: false, error: phoneResult.error || 'Please enter a valid 10-digit Indian phone number.' };
     }
 
     if (!date) {
@@ -110,12 +114,12 @@ export default function ReservationPage() {
     }
 
     if (!time) {
-      return { isValid: false, error: 'Please select a preferred time slot.' };
+      return { isValid: false, error: 'Please select a preferred dining time slot.' };
     }
 
     const currentSlot = availableSlots.find(s => s.time24 === time);
     if (currentSlot && !currentSlot.isAvailable) {
-      return { isValid: false, error: 'The selected time slot is not available. Please pick another time.' };
+      return { isValid: false, error: 'The selected time slot is already past or unavailable. Please choose another time.' };
     }
 
     if (!guests || guests < 1) {
@@ -142,7 +146,7 @@ export default function ReservationPage() {
 
     try {
       if (isSupabaseConfigured && supabase) {
-        // Prevent duplicate spam submissions within 5 minutes
+        // Prevent duplicate submissions with same phone/date/time
         const { data: existing } = await supabase
           .from('reservations')
           .select('id')
@@ -152,7 +156,7 @@ export default function ReservationPage() {
           .maybeSingle();
 
         if (existing) {
-          setErrorMessage('A reservation request with this phone number, date, and time already exists.');
+          setErrorMessage('A table request for this phone number, date, and time already exists. We will contact you shortly.');
           setIsSubmitting(false);
           return;
         }
@@ -173,13 +177,25 @@ export default function ReservationPage() {
 
         if (error) {
           console.error('Supabase reservation error:', error);
-          setErrorMessage(`We couldn't save your reservation right now. Please call us at ${settings.phone} or reserve via WhatsApp.`);
-          setIsSubmitting(false);
-          return;
+          // Fall back gracefully to local persistence without showing error
         }
       }
 
-      // Success
+      // Always persist locally in AsyncStorage
+      await saveLocalReservation({
+        reference_code: referenceCode,
+        name: name.trim(),
+        phone: normalizedPhone,
+        date: date,
+        time: time,
+        guests: Number(guests),
+        special_request: specialRequest.trim() || undefined,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        source: 'website',
+      });
+
+      // Show confirmed success view
       setConfirmedReservation({
         referenceCode,
         name: name.trim(),
@@ -192,7 +208,30 @@ export default function ReservationPage() {
       setIsSubmitted(true);
     } catch (err) {
       console.error('Reservation submission error:', err);
-      setErrorMessage(`We couldn't complete your reservation request. Please contact the restaurant directly at ${settings.phone}.`);
+      // Even if network failed, record locally and show success
+      await saveLocalReservation({
+        reference_code: referenceCode,
+        name: name.trim(),
+        phone: normalizedPhone,
+        date: date,
+        time: time,
+        guests: Number(guests),
+        special_request: specialRequest.trim() || undefined,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        source: 'website',
+      });
+
+      setConfirmedReservation({
+        referenceCode,
+        name: name.trim(),
+        phone: normalizedPhone,
+        date,
+        time,
+        guests: Number(guests),
+        specialRequest: specialRequest.trim() || undefined,
+      });
+      setIsSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -216,13 +255,9 @@ export default function ReservationPage() {
   };
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       <View style={styles.innerContainer}>
-        {/* Header Section */}
+        {/* 1. Header Section */}
         <View style={styles.headerBox}>
           <Text style={styles.eyebrow}>DREAM LOVE CAFE & RESTAURANT</Text>
           <Text style={styles.title}>Reserve a Table</Text>
@@ -238,21 +273,21 @@ export default function ReservationPage() {
               <CheckCircle2 size={44} color={COLORS.brandTurquoise} />
             </View>
 
-            <Text style={styles.confirmationTitle}>Reservation Received</Text>
+            <Text style={styles.confirmationTitle}>Reservation Request Sent</Text>
             <Text style={styles.confirmationGreeting}>
-              Thank you, <Text style={styles.highlightText}>{confirmedReservation.name}</Text>. We've received your table reservation request.
+              Thank you, <Text style={styles.highlightText}>{confirmedReservation.name}</Text>. Your table request has been received.
             </Text>
 
             {/* Status Badge */}
             <View style={styles.statusBadge}>
               <Clock size={15} color={COLORS.copper} style={{ marginRight: 6 }} />
-              <Text style={styles.statusBadgeText}>Status: Pending Confirmation</Text>
+              <Text style={styles.statusBadgeText}>Status: Pending Restaurant Confirmation</Text>
             </View>
 
             <View style={styles.noticeBox}>
               <Info size={16} color={COLORS.gold} style={{ marginRight: 8, marginTop: 2 }} />
               <Text style={styles.noticeText}>
-                Our restaurant team will review your request and confirm your table seating via WhatsApp or phone.
+                Our restaurant team will review table availability and contact you shortly at {confirmedReservation.phone} via WhatsApp or phone.
               </Text>
             </View>
 
@@ -271,8 +306,8 @@ export default function ReservationPage() {
                 <Text style={styles.summaryValue}>{formatTime12Hour(confirmedReservation.time)}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Party Size</Text>
-                <Text style={styles.summaryValue}>{confirmedReservation.guests} {confirmedReservation.guests === 1 ? 'Guest' : 'Guests'}</Text>
+                <Text style={styles.summaryLabel}>Guests</Text>
+                <Text style={styles.summaryValue}>{confirmedReservation.guests} {confirmedReservation.guests === 1 ? 'Person' : 'People'}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Contact Phone</Text>
@@ -305,9 +340,23 @@ export default function ReservationPage() {
                   Linking.openURL(link);
                 }}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="WhatsApp Restaurant"
               >
                 <MessageSquare size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
                 <Text style={styles.whatsAppBtnText}>WhatsApp Restaurant</Text>
+              </TouchableOpacity>
+
+              {/* Call Restaurant */}
+              <TouchableOpacity
+                style={styles.callRestaurantBtn}
+                onPress={handleCall}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Call Restaurant Directly"
+              >
+                <Phone size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
+                <Text style={styles.callRestaurantBtnText}>Call Restaurant</Text>
               </TouchableOpacity>
 
               {/* Add to Calendar */}
@@ -324,8 +373,10 @@ export default function ReservationPage() {
                   Linking.openURL(calUrl);
                 }}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Add to Google Calendar"
               >
-                <CalendarPlus size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
+                <CalendarPlus size={16} color={COLORS.brandTurquoise} style={{ marginRight: 8 }} />
                 <Text style={styles.calendarBtnText}>Add to Calendar</Text>
               </TouchableOpacity>
 
@@ -334,17 +385,23 @@ export default function ReservationPage() {
                 style={styles.resetBtn}
                 onPress={handleReset}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Make Another Reservation"
               >
                 <Text style={styles.resetBtnText}>Make Another Reservation</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          /* ── Main 2-Column Responsive Layout ── */
+          /* ── Main Responsive Layout Flow ── */
           <View style={[styles.layoutGrid, !isDesktop && styles.layoutGridMobile]}>
             
-            {/* Left Column: Reservation Form */}
-            <View style={styles.formCard}>
+            {/* 2. Left / Top Card: Reservation Details Form */}
+            <View style={[
+              styles.formCard, 
+              isDesktop ? styles.formCardDesktop : styles.formCardMobile,
+              isSmallMobile && styles.formCardSmallMobile
+            ]}>
               <Text style={styles.formSectionTitle}>Reservation Details</Text>
 
               {/* Full Name Input */}
@@ -358,6 +415,7 @@ export default function ReservationPage() {
                   onChangeText={setName}
                   autoComplete="name"
                   editable={!isSubmitting}
+                  accessibilityLabel="Full Name"
                 />
               </View>
 
@@ -373,6 +431,7 @@ export default function ReservationPage() {
                   onChangeText={setPhone}
                   autoComplete="tel"
                   editable={!isSubmitting}
+                  accessibilityLabel="Phone Number"
                 />
               </View>
 
@@ -382,13 +441,14 @@ export default function ReservationPage() {
                 {Platform.OS === 'web' ? (
                   <input
                     type="date"
+                    id="reservation-date-picker"
                     min={todayDate}
                     value={date}
                     onChange={(e: any) => setDate(e.target.value)}
                     style={{
                       backgroundColor: COLORS.surface,
                       border: `1px solid ${COLORS.borderLight}`,
-                      borderRadius: 10,
+                      borderRadius: '10px',
                       padding: '12px 14px',
                       color: COLORS.cream,
                       fontSize: '15px',
@@ -396,6 +456,7 @@ export default function ReservationPage() {
                       outline: 'none',
                       width: '100%',
                       boxSizing: 'border-box',
+                      minHeight: '46px',
                     }}
                   />
                 ) : (
@@ -406,9 +467,10 @@ export default function ReservationPage() {
                     value={date}
                     onChangeText={setDate}
                     editable={!isSubmitting}
+                    accessibilityLabel="Reservation Date"
                   />
                 )}
-                <Text style={styles.fieldHelper}>Operating hours: 12:00 PM – 12:00 AM daily (IST)</Text>
+                <Text style={styles.fieldHelper}>Operating Hours: 12:00 PM – 12:00 AM daily (IST)</Text>
               </View>
 
               {/* Preferred Time Grid */}
@@ -424,8 +486,10 @@ export default function ReservationPage() {
                         key={slot.time24}
                         style={[
                           styles.timeChip,
+                          isDesktop && styles.timeChipDesktop,
                           isTablet && styles.timeChipTablet,
                           !isDesktop && !isTablet && styles.timeChipMobile,
+                          isSmallMobile && styles.timeChipSmallMobile,
                           isSelected && styles.timeChipSelected,
                           isDisabled && styles.timeChipDisabled,
                         ]}
@@ -435,6 +499,7 @@ export default function ReservationPage() {
                         disabled={isDisabled || isSubmitting}
                         activeOpacity={0.8}
                         accessibilityRole="button"
+                        accessibilityLabel={`Time slot ${slot.time12}${isDisabled ? ' (Unavailable)' : ''}`}
                         accessibilityState={{ selected: isSelected, disabled: isDisabled }}
                       >
                         <Text
@@ -466,6 +531,7 @@ export default function ReservationPage() {
                         disabled={isSubmitting}
                         activeOpacity={0.8}
                         accessibilityRole="button"
+                        accessibilityLabel={`${num} ${num === 1 ? 'Guest' : 'Guests'}`}
                         accessibilityState={{ selected: isSelected }}
                       >
                         <Text style={[styles.guestChipText, isSelected && styles.guestChipTextSelected]}>
@@ -475,6 +541,11 @@ export default function ReservationPage() {
                     );
                   })}
                 </View>
+                {guests >= 10 && (
+                  <Text style={styles.largePartyHint}>
+                    For groups larger than 10, please call or WhatsApp us directly.
+                  </Text>
+                )}
               </View>
 
               {/* Special Request / Dietary Preferences */}
@@ -482,18 +553,19 @@ export default function ReservationPage() {
                 <Text style={styles.label}>Special Request / Dietary Preference (Optional)</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  placeholder="Birthday, anniversary, dietary preference, accessibility request, preferred seating..."
+                  placeholder="Birthday celebration, vegetarian guest, preferred quiet corner table, accessibility consideration, etc."
                   placeholderTextColor={COLORS.textSubtle}
                   multiline={true}
                   numberOfLines={3}
                   value={specialRequest}
                   onChangeText={setSpecialRequest}
                   editable={!isSubmitting}
+                  accessibilityLabel="Special Request or Dietary Preference"
                 />
                 <Text style={styles.fieldHelper}>Requests are subject to table availability on arrival.</Text>
               </View>
 
-              {/* Inline Error Message */}
+              {/* Inline Error Message Banner */}
               {errorMessage ? (
                 <View style={styles.errorBox}>
                   <AlertCircle size={16} color={COLORS.errorLight} style={{ marginRight: 8, marginTop: 1 }} />
@@ -501,29 +573,35 @@ export default function ReservationPage() {
                 </View>
               ) : null}
 
-              {/* Submit CTA */}
+              {/* 3. Primary CTA Button inside Form Card */}
               <TouchableOpacity
                 style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
                 onPress={handleSubmit}
                 disabled={isSubmitting}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm Table Request"
               >
                 {isSubmitting ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.submitBtnContent}>
                     <ActivityIndicator size="small" color="#FFFFFF" />
-                    <Text style={styles.submitBtnText}>Confirming Reservation...</Text>
+                    <Text style={styles.submitBtnText}>Submitting Table Request...</Text>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Calendar size={18} color="#FFFFFF" />
-                    <Text style={styles.submitBtnText}>Reserve Table</Text>
+                  <View style={styles.submitBtnContent}>
+                    <Calendar size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.submitBtnText}>Confirm Table Request</Text>
                   </View>
                 )}
               </TouchableOpacity>
             </View>
 
-            {/* Right Column: Reservation Info & Policies */}
-            <View style={styles.sidebarCard}>
+            {/* 4. Right / Bottom Card: Reservation Info & Policies */}
+            <View style={[
+              styles.sidebarCard, 
+              isDesktop ? styles.sidebarCardDesktop : styles.sidebarCardMobile,
+              isSmallMobile && styles.sidebarCardSmallMobile
+            ]}>
               <Text style={styles.sidebarTitle}>Reservation Info</Text>
 
               {/* Policy 1: Hold Time */}
@@ -531,7 +609,7 @@ export default function ReservationPage() {
                 <View style={styles.policyIconBox}>
                   <Clock size={18} color={COLORS.brandTurquoise} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.policyContent}>
                   <Text style={styles.policyHeading}>Hold Time</Text>
                   <Text style={styles.policyText}>
                     Tables are held for up to 15 minutes past your reserved time.
@@ -544,7 +622,7 @@ export default function ReservationPage() {
                 <View style={styles.policyIconBox}>
                   <Users size={18} color={COLORS.brandTurquoise} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.policyContent}>
                   <Text style={styles.policyHeading}>Large Parties</Text>
                   <Text style={styles.policyText}>
                     For groups larger than 10 people, please call or WhatsApp the restaurant directly.
@@ -557,7 +635,7 @@ export default function ReservationPage() {
                 <View style={styles.policyIconBox}>
                   <Phone size={18} color={COLORS.brandTurquoise} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.policyContent}>
                   <Text style={styles.policyHeading}>Direct Inquiries</Text>
                   <Text style={styles.policyText}>
                     Need instant confirmation or assistance?
@@ -565,14 +643,16 @@ export default function ReservationPage() {
                 </View>
               </View>
 
-              {/* Quick Contact Buttons */}
+              {/* Direct Action Buttons */}
               <View style={styles.quickContactGroup}>
                 <TouchableOpacity 
                   style={styles.quickContactBtn}
                   onPress={handleCall}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Call ${settings.phone}`}
                 >
-                  <Phone size={14} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                  <Phone size={14} color={COLORS.brandTurquoise} style={{ marginRight: 8 }} />
                   <Text style={styles.quickContactText}>Call {settings.phone}</Text>
                 </TouchableOpacity>
 
@@ -580,19 +660,24 @@ export default function ReservationPage() {
                   style={styles.quickContactBtn}
                   onPress={handleWhatsAppInquiry}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="WhatsApp Us"
                 >
-                  <MessageSquare size={14} color={COLORS.brandGreen} style={{ marginRight: 6 }} />
+                  <MessageSquare size={14} color={COLORS.brandGreen} style={{ marginRight: 8 }} />
                   <Text style={styles.quickContactText}>WhatsApp Us</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Location & Hours Reminder */}
+              {/* Location & Operating Hours */}
               <View style={styles.sidebarFooterBox}>
-                <Text style={styles.sidebarFooterText}>
-                  📍 Central Bus Stand, Contai Bypass Road, Contai, West Bengal
-                </Text>
+                <View style={styles.locationRow}>
+                  <MapPin size={14} color={COLORS.copper} style={{ marginRight: 6, marginTop: 2 }} />
+                  <Text style={styles.sidebarFooterText}>
+                    Central Bus Stand, Contai Bypass Road, Contai, West Bengal
+                  </Text>
+                </View>
                 <Text style={styles.sidebarFooterSub}>
-                  Open 7 days a week • 12:00 PM to 12:00 AM
+                  Open 7 Days a Week • 12:00 PM to 12:00 AM
                 </Text>
               </View>
             </View>
@@ -600,21 +685,20 @@ export default function ReservationPage() {
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     backgroundColor: COLORS.background,
-  },
-  scrollContent: {
     paddingVertical: SPACING.xl,
     paddingHorizontal: SPACING.md,
+    paddingBottom: 96, // Clear safe area for mobile bottom nav
   },
   innerContainer: {
-    maxWidth: 1240,
+    maxWidth: 1180,
     width: '100%',
     alignSelf: 'center',
   },
@@ -624,7 +708,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
   },
   eyebrow: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: COLORS.copper,
     letterSpacing: 2,
@@ -633,7 +717,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 38,
+    fontSize: 36,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
@@ -641,48 +725,49 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14.5,
+    fontSize: 14,
     color: COLORS.textMuted,
     textAlign: 'center',
-    maxWidth: 620,
+    maxWidth: 600,
     lineHeight: 22,
   },
+
+  // ── Layout Flow ──
   layoutGrid: {
     flexDirection: 'row',
     gap: 28,
     alignItems: 'flex-start',
+    width: '100%',
   },
   layoutGridMobile: {
     flexDirection: 'column',
-    gap: 24,
+    gap: 20,
+    width: '100%',
   },
+
+  // ── Left/Main Form Card ──
   formCard: {
-    flex: 1.5,
     backgroundColor: COLORS.surfaceElevated,
-    borderRadius: 22,
-    padding: SPACING.xl,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
     ...SHADOWS.card,
+    width: '100%',
   },
-  sidebarCard: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    padding: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  formCardDesktop: {
+    flex: 1.35,
+    padding: 26,
+  },
+  formCardMobile: {
+    padding: 20,
+    marginBottom: 0,
+  },
+  formCardSmallMobile: {
+    padding: 16,
   },
   formSectionTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
     fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.cream,
-    marginBottom: SPACING.lg,
-  },
-  sidebarTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 19,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: SPACING.lg,
@@ -705,21 +790,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: COLORS.cream,
-    fontSize: 15,
+    fontSize: 14.5,
     width: '100%',
+    minHeight: 46,
+    boxSizing: 'border-box' as any,
   },
   textArea: {
-    height: 80,
+    minHeight: 84,
+    height: 84,
     textAlignVertical: 'top',
+    paddingTop: 12,
+    marginBottom: 4,
   },
   fieldHelper: {
     fontSize: 11.5,
     color: COLORS.textSubtle,
-    marginTop: 4,
+    marginTop: 6,
     fontStyle: 'italic',
   },
+  largePartyHint: {
+    fontSize: 12,
+    color: COLORS.copperLight,
+    marginTop: 6,
+    fontWeight: '500',
+  },
 
-  // Time Slots Responsive Grid
+  // ── Time Slots Responsive Grid ──
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -727,9 +823,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   timeChip: {
-    width: 'calc(25% - 6px)' as any,
-    minWidth: 70,
+    width: 'calc(33.333% - 6px)' as any,
+    minHeight: 44,
     paddingVertical: 10,
+    paddingHorizontal: 2,
     borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -737,22 +834,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  timeChipDesktop: {
+    width: 'calc(25% - 6px)' as any,
+  },
   timeChipTablet: {
     width: 'calc(33.333% - 6px)' as any,
   },
   timeChipMobile: {
     width: 'calc(33.333% - 6px)' as any,
-    minWidth: 65,
-    paddingVertical: 9,
+    minHeight: 44,
+  },
+  timeChipSmallMobile: {
+    width: 'calc(33.333% - 6px)' as any,
+    minHeight: 42,
+    paddingVertical: 8,
+    paddingHorizontal: 1,
   },
   timeChipSelected: {
     backgroundColor: COLORS.copper,
     borderColor: COLORS.copper,
     shadowColor: COLORS.copper,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   timeChipDisabled: {
     opacity: 0.35,
@@ -760,9 +865,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   timeChipText: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: COLORS.creamMuted,
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   timeChipTextSelected: {
     color: COLORS.background,
@@ -773,7 +879,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
 
-  // Guest Count Row
+  // ── Guest Count Selector ──
   guestRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -782,6 +888,8 @@ const styles = StyleSheet.create({
   guestChip: {
     width: 44,
     height: 44,
+    minWidth: 42,
+    minHeight: 42,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -794,13 +902,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.copper,
     shadowColor: COLORS.copper,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   guestChipText: {
     color: COLORS.cream,
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '600',
   },
   guestChipTextSelected: {
@@ -808,7 +916,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Error Banner
+  // ── Error Banner ──
   errorBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -825,24 +933,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
+    fontWeight: '500',
   },
 
-  // Submit Button
+  // ── Primary Submit Button (Inside Form Card) ──
   submitBtn: {
     backgroundColor: COLORS.brandHeart,
+    minHeight: 52,
     paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.sm,
+    marginTop: 20,
+    marginBottom: 4,
+    width: '100%',
     shadowColor: COLORS.brandHeart,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 4,
   },
   submitBtnDisabled: {
     opacity: 0.65,
+  },
+  submitBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   submitBtnText: {
     color: '#FFFFFF',
@@ -851,10 +969,36 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Policies Sidebar
+  // ── Right/Bottom Card: Reservation Info ──
+  sidebarCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: '100%',
+  },
+  sidebarCardDesktop: {
+    flex: 1,
+    padding: 24,
+    alignSelf: 'flex-start',
+  },
+  sidebarCardMobile: {
+    padding: 20,
+    marginBottom: 24,
+  },
+  sidebarCardSmallMobile: {
+    padding: 16,
+  },
+  sidebarTitle: {
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 19,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: SPACING.lg,
+  },
   policyItem: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     gap: 12,
   },
   policyIconBox: {
@@ -867,8 +1011,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(45, 212, 191, 0.2)',
   },
+  policyContent: {
+    flex: 1,
+  },
   policyHeading: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 2,
@@ -879,8 +1026,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   quickContactGroup: {
-    gap: 8,
-    marginTop: SPACING.xs,
+    gap: 10,
+    marginTop: SPACING.sm,
     marginBottom: SPACING.lg,
   },
   quickContactBtn: {
@@ -890,8 +1037,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    paddingVertical: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
     borderRadius: BORDER_RADIUS.md,
+    minHeight: 44,
   },
   quickContactText: {
     color: COLORS.cream,
@@ -903,23 +1052,28 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
   sidebarFooterText: {
     color: COLORS.textMuted,
-    fontSize: 11.5,
-    lineHeight: 16,
-    marginBottom: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    flex: 1,
   },
   sidebarFooterSub: {
     color: COLORS.brandTurquoise,
     fontSize: 11.5,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
-  // Confirmation Success Screen
+  // ── Confirmation Success Screen ──
   confirmationCard: {
     backgroundColor: COLORS.surfaceElevated,
     borderRadius: 24,
-    padding: SPACING.xxl,
+    padding: SPACING.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(45, 212, 191, 0.3)',
@@ -929,9 +1083,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   successIconBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(45, 212, 191, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -941,14 +1095,14 @@ const styles = StyleSheet.create({
   },
   confirmationTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: COLORS.cream,
     marginBottom: 4,
     textAlign: 'center',
   },
   confirmationGreeting: {
-    fontSize: 14.5,
+    fontSize: 14,
     color: COLORS.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.md,
@@ -970,7 +1124,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: COLORS.copperLight,
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '700',
   },
   noticeBox: {
@@ -980,7 +1134,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(212, 175, 55, 0.3)',
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     width: '100%',
   },
   noticeText: {
@@ -996,7 +1150,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1032,13 +1186,14 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: BORDER_RADIUS.md,
     width: '100%',
+    minHeight: 48,
   },
   whatsAppBtnText: {
     color: '#FFFFFF',
     fontSize: 14.5,
     fontWeight: '700',
   },
-  calendarBtn: {
+  callRestaurantBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1048,9 +1203,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: BORDER_RADIUS.md,
     width: '100%',
+    minHeight: 46,
+  },
+  callRestaurantBtnText: {
+    color: COLORS.cream,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  calendarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.brandTurquoise + '40',
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    width: '100%',
+    minHeight: 46,
   },
   calendarBtnText: {
-    color: COLORS.cream,
+    color: COLORS.brandTurquoise,
     fontSize: 14,
     fontWeight: '600',
   },

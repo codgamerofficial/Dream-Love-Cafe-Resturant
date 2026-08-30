@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MapPin, Phone, Clock, MessageSquare, ExternalLink, ShieldCheck } from 'lucide-react-native';
+import { MapPin, Phone, Clock, MessageSquare, ExternalLink, Star } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../theme';
 import { useSettings } from '../../context/SettingsContext';
 import { BrandLogo } from '../ui/BrandLogo';
@@ -27,17 +27,18 @@ export const Footer: React.FC = () => {
   return (
     <View style={[styles.footerContainer, !isDesktop && styles.footerContainerMobile]}>
       <View style={styles.footerContent}>
-        {/* Main Grid Columns */}
+        {/* Main 3-Column Editorial Grid */}
         <View style={[styles.gridRow, !isDesktop && styles.gridRowMobile]}>
           
-          {/* Column 1: Brand & Philosophy */}
-          <View style={isDesktop ? [styles.columnDesktop, { flex: 1.3 }] : styles.columnMobile}>
+          {/* Column 1: Brand & Cuisines */}
+          <View style={isDesktop ? [styles.columnDesktop, { flex: 1.35 }] : styles.columnMobile}>
             <BrandLogo variant="primary" size="md" />
 
             <Text style={styles.brandDescription}>
-              A local multi-cuisine dining destination in Contai, West Bengal. Serving comforting classics, Indian tandoor, dum biryani, Chinese favorites, mocktails, and fresh cafe beverages.
+              An intimate multi-cuisine dining destination in Contai, West Bengal. Serving comforting classics, Indian tandoor, authentic dum biryani, Chinese favorites, mocktails, and fresh cafe beverages.
             </Text>
 
+            {/* Clean Cuisine Pills */}
             <View style={styles.cuisinesBadgeRow}>
               {settings.cuisines.map((c) => (
                 <View key={c} style={styles.cuisineBadge}>
@@ -46,124 +47,130 @@ export const Footer: React.FC = () => {
               ))}
             </View>
 
-            {/* Verified Listings Badges */}
-            <View style={styles.listingLinksContainer}>
-              <Text style={styles.listingHeading}>Verified Public Listings:</Text>
-              <View style={styles.listingBadgesRow}>
-                <TouchableOpacity 
-                  style={styles.listingBadge}
-                  onPress={() => Linking.openURL(settings.googleReviewsUrl)}
-                >
-                  <Text style={styles.listingBadgeName}>Google</Text>
-                  <Text style={styles.listingBadgeRating}>★ {settings.googleRating}</Text>
-                </TouchableOpacity>
+            {/* Dining Modes */}
+            <Text style={styles.diningModesText}>
+              Available for Dine-in • Takeaway • No-contact Delivery
+            </Text>
+          </View>
 
-                {settings.justdialUrl && (
-                  <TouchableOpacity 
-                    style={styles.listingBadge}
-                    onPress={() => Linking.openURL(settings.justdialUrl!)}
-                  >
-                    <Text style={styles.listingBadgeName}>Justdial</Text>
-                    <Text style={styles.listingBadgeRating}>★ {settings.justdialRating || '4.0'}</Text>
-                  </TouchableOpacity>
-                )}
-
-                {settings.magicpinUrl && (
-                  <TouchableOpacity 
-                    style={styles.listingBadge}
-                    onPress={() => Linking.openURL(settings.magicpinUrl!)}
-                  >
-                    <Text style={styles.listingBadgeName}>Magicpin</Text>
-                    <Text style={styles.listingBadgeRating}>★ {settings.magicpinRating || '4.1'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+          {/* Column 2: Explore Navigation */}
+          <View style={isDesktop ? [styles.columnDesktop, { flex: 0.85 }] : styles.columnMobile}>
+            <Text style={styles.columnTitle}>Explore</Text>
+            <View style={styles.linkList}>
+              <TouchableOpacity onPress={() => router.push('/')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Home</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/menu')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Full Menu</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/about')} style={styles.linkItem}>
+                <Text style={styles.linkText}>About Our Story</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/gallery')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Real Photo Gallery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/reviews')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Guest Reviews</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/book')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Reserve a Table</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/visit')} style={styles.linkItem}>
+                <Text style={styles.linkText}>Visit & Directions</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Column 2: Quick Links */}
-          <View style={isDesktop ? [styles.columnDesktop, { flex: 0.9 }] : styles.columnMobile}>
-            <Text style={styles.columnTitle}>Explore</Text>
-            <TouchableOpacity onPress={() => router.push('/')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/menu')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Full Menu</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/about')} style={styles.linkItem}>
-              <Text style={styles.linkText}>About Restaurant</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/gallery')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Real Photo Gallery</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/reviews')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Guest Reviews</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/book')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Book Table</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/visit')} style={styles.linkItem}>
-              <Text style={styles.linkText}>Visit & Directions</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Column 3: Contact & Location */}
+          {/* Column 3: Visit & Contact Details */}
           <View style={isDesktop ? [styles.columnDesktop, { flex: 1.2 }] : styles.columnMobile}>
             <Text style={styles.columnTitle}>Visit & Contact</Text>
             
-            <TouchableOpacity style={styles.contactRow} onPress={handleOpenMaps}>
-              <MapPin size={16} color={COLORS.brandTurquoise} style={styles.contactIcon} />
+            {/* Address */}
+            <TouchableOpacity onPress={handleOpenMaps} style={styles.contactItem} activeOpacity={0.8}>
+              <MapPin size={16} color={COLORS.copper} style={{ marginRight: 10, marginTop: 3, flexShrink: 0 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.contactText}>{settings.address}</Text>
-                <Text style={styles.landmarkText}>Landmark: Central Bus Stand / Opp. Jawed Habib's</Text>
+                <Text style={styles.contactValueBold}>Central Bus Stand, Contai</Text>
+                <Text style={styles.contactValueSub}>
+                  Contai Bypass Rd, opposite Jawed Habib's, Kishore Nagar Garh, Contai, West Bengal 721404
+                </Text>
+                <Text style={styles.plusCodeText}>Plus Code: {settings.plusCode}</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.contactRow} onPress={handleCall}>
-              <Phone size={16} color={COLORS.brandTurquoise} style={styles.contactIcon} />
-              <Text style={styles.contactText}>{settings.phone}</Text>
+            {/* Phone */}
+            <TouchableOpacity onPress={handleCall} style={styles.contactItem} activeOpacity={0.8}>
+              <Phone size={16} color={COLORS.brandTurquoise} style={{ marginRight: 10, flexShrink: 0 }} />
+              <Text style={styles.contactValue}>{settings.phone}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.contactRow} onPress={handleWhatsApp}>
-              <MessageSquare size={16} color={COLORS.brandTurquoise} style={styles.contactIcon} />
-              <Text style={styles.contactText}>WhatsApp: {settings.whatsapp}</Text>
+            {/* WhatsApp */}
+            <TouchableOpacity onPress={handleWhatsApp} style={styles.contactItem} activeOpacity={0.8}>
+              <MessageSquare size={16} color={COLORS.brandGreen} style={{ marginRight: 10, flexShrink: 0 }} />
+              <Text style={styles.contactValue}>WhatsApp: {settings.phone}</Text>
             </TouchableOpacity>
 
-            <View style={styles.contactRow}>
-              <Clock size={16} color={COLORS.brandTurquoise} style={styles.contactIcon} />
+            {/* Hours */}
+            <View style={styles.contactItem}>
+              <Clock size={16} color={COLORS.gold} style={{ marginRight: 10, flexShrink: 0 }} />
               <View>
-                <Text style={styles.contactText}>{settings.openingHours}</Text>
-                <Text style={styles.openDaysText}>Open 7 Days a Week (Dine-in • Takeaway • Delivery)</Text>
+                <Text style={styles.contactValue}>Monday – Sunday</Text>
+                <Text style={styles.contactValueHighlight}>12:00 PM – 12:00 AM Daily</Text>
               </View>
             </View>
           </View>
-
         </View>
 
-        {/* Informational Disclaimer */}
-        <View style={styles.disclaimerBox}>
-          <Text style={styles.disclaimerText}>
-            Notice: Menu items, pricing, and availability are subject to daily kitchen operations. Please confirm current prices and availability with the restaurant staff during order placement.
-          </Text>
+        {/* Verified Public Ratings Strip */}
+        <View style={styles.ratingsStrip}>
+          <Text style={styles.ratingsLabel}>Verified Listings & Reviews:</Text>
+          <View style={styles.ratingsBadgesRow}>
+            <TouchableOpacity 
+              style={styles.ratingBadge}
+              onPress={() => Linking.openURL(settings.googleReviewsUrl)}
+              activeOpacity={0.8}
+            >
+              <Star size={12} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 4 }} />
+              <Text style={styles.ratingBadgeName}>Google</Text>
+              <Text style={styles.ratingBadgeVal}>★ {settings.googleRating} ({settings.googleReviewsCount}+)</Text>
+            </TouchableOpacity>
+
+            {settings.justdialUrl && (
+              <TouchableOpacity 
+                style={styles.ratingBadge}
+                onPress={() => Linking.openURL(settings.justdialUrl!)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.ratingBadgeName}>Justdial</Text>
+                <Text style={styles.ratingBadgeVal}>★ {settings.justdialRating || '4.0'}</Text>
+              </TouchableOpacity>
+            )}
+
+            {settings.magicpinUrl && (
+              <TouchableOpacity 
+                style={styles.ratingBadge}
+                onPress={() => Linking.openURL(settings.magicpinUrl!)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.ratingBadgeName}>Magicpin</Text>
+                <Text style={styles.ratingBadgeVal}>★ {settings.magicpinRating || '4.1'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* Footer Bottom Bar */}
+        {/* Bottom Copyright & Staff Portal Bar */}
         <View style={styles.bottomBar}>
           <Text style={styles.copyrightText}>
-            © {new Date().getFullYear()} Dream Love Cafe & Restaurant. All rights reserved. Contai, West Bengal.
+            © 2026 Dream Love Café & Restaurant. All rights reserved. Contai, West Bengal.
           </Text>
-
-          <View style={styles.bottomLinks}>
-            <TouchableOpacity 
-              onPress={() => router.push('/admin/login')} 
-              style={styles.adminAccessLink}
-              accessibilityRole="link"
-              accessibilityLabel="Admin Portal Access"
-            >
-              <ShieldCheck size={14} color={COLORS.textMuted} style={{ marginRight: 4 }} />
-              <Text style={styles.adminAccessText}>Staff Login</Text>
-            </TouchableOpacity>
-          </View>
+          
+          <TouchableOpacity 
+            onPress={() => router.push('/admin')} 
+            style={styles.staffLink}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.staffLinkText}>Staff & Admin Portal</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -172,31 +179,32 @@ export const Footer: React.FC = () => {
 
 const styles = StyleSheet.create({
   footerContainer: {
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.backgroundDeep,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-    marginTop: 'auto',
+    paddingTop: SPACING.xxl,
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    width: '100%',
   },
   footerContainerMobile: {
-    paddingTop: SPACING.lg,
-    paddingBottom: 85, // Clear space above mobile bottom bar
+    paddingTop: SPACING.xl,
+    paddingBottom: 84, // Space for mobile bottom nav
   },
   footerContent: {
-    maxWidth: 1150,
+    maxWidth: 1240,
     width: '100%',
-    alignSelf: 'center',
+    marginHorizontal: 'auto',
   },
   gridRow: {
     flexDirection: 'row',
-    gap: SPACING.lg,
-    justifyContent: 'space-between',
+    gap: 48,
+    marginBottom: SPACING.xxl,
   },
   gridRowMobile: {
     flexDirection: 'column',
-    gap: SPACING.lg,
+    gap: 36,
+    marginBottom: SPACING.xl,
   },
   columnDesktop: {
     flex: 1,
@@ -205,148 +213,150 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   brandDescription: {
-    color: COLORS.creamMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
+    fontSize: 14,
+    color: COLORS.textMuted,
+    lineHeight: 22,
+    marginTop: 14,
+    marginBottom: 16,
+    maxWidth: 380,
   },
   cuisinesBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: SPACING.sm,
+    marginBottom: 12,
   },
   cuisineBadge: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cuisineBadgeText: {
-    color: COLORS.brandTurquoise,
-    fontSize: 10.5,
-    fontWeight: '600',
-  },
-  listingLinksContainer: {
-    marginTop: 4,
-  },
-  listingHeading: {
-    color: COLORS.textMuted,
-    fontSize: 10.5,
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  listingBadgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  listingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 7,
+    paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
-  listingBadgeName: {
-    color: COLORS.cream,
-    fontSize: 10.5,
+  cuisineBadgeText: {
+    color: COLORS.creamMuted,
+    fontSize: 11.5,
     fontWeight: '600',
   },
-  listingBadgeRating: {
-    color: COLORS.gold,
-    fontSize: 10.5,
-    fontWeight: '700',
+  diningModesText: {
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    fontStyle: 'italic',
   },
   columnTitle: {
-    color: COLORS.cream,
-    fontSize: 15,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: SPACING.sm,
-    letterSpacing: 0.5,
+    color: COLORS.cream,
+    marginBottom: SPACING.md,
+    letterSpacing: 0.2,
+  },
+  linkList: {
+    gap: 10,
   },
   linkItem: {
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   linkText: {
-    color: COLORS.creamMuted,
-    fontSize: 13,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: '500',
   },
-  contactRow: {
+  contactItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: 14,
   },
-  contactIcon: {
+  contactValueBold: {
+    color: COLORS.cream,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  contactValueSub: {
+    color: COLORS.textMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  plusCodeText: {
+    color: COLORS.copperLight,
+    fontSize: 11.5,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  contactValue: {
+    color: COLORS.creamMuted,
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
+  contactValueHighlight: {
+    color: COLORS.brandTurquoise,
+    fontSize: 12.5,
+    fontWeight: '600',
     marginTop: 2,
   },
-  contactText: {
-    color: COLORS.cream,
+  ratingsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.lg,
+  },
+  ratingsLabel: {
     fontSize: 12.5,
-    fontWeight: '500',
-    lineHeight: 17,
-  },
-  landmarkText: {
     color: COLORS.textMuted,
-    fontSize: 11,
-    marginTop: 1,
+    fontWeight: '600',
   },
-  openDaysText: {
-    color: COLORS.brandTurquoise,
-    fontSize: 11,
-    marginTop: 1,
-  },
-  disclaimerBox: {
-    marginTop: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  disclaimerText: {
-    color: COLORS.textSubtle,
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 15,
-  },
-  bottomBar: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+  ratingsBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     gap: 8,
   },
-  copyrightText: {
-    color: COLORS.textMuted,
-    fontSize: 11.5,
-  },
-  bottomLinks: {
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  adminAccessLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 3,
-    paddingHorizontal: 7,
-    borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.sm,
   },
-  adminAccessText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
+  ratingBadgeName: {
+    color: COLORS.cream,
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  ratingBadgeVal: {
+    color: COLORS.gold,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingTop: SPACING.sm,
+  },
+  copyrightText: {
+    color: COLORS.textSubtle,
+    fontSize: 12,
+  },
+  staffLink: {
+    paddingVertical: 4,
+  },
+  staffLinkText: {
+    color: COLORS.copper,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

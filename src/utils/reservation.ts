@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 /**
  * Dream Love Cafe & Restaurant — Reservation Utilities
  * Handles timezone-safe date/time generation, slot calculations,
@@ -278,3 +280,56 @@ export function generateGoogleCalendarLink({
     return 'https://calendar.google.com';
   }
 }
+
+export const LOCAL_RESERVATIONS_STORAGE_KEY = '@dream_love_reservations_local_v1';
+
+export interface StoredLocalReservation {
+  id?: string;
+  reference_code: string;
+  name: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  special_request?: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  created_at: string;
+  source: string;
+}
+
+/**
+ * Persists a new reservation locally in AsyncStorage so it survives reloads.
+ */
+export async function saveLocalReservation(res: StoredLocalReservation): Promise<void> {
+  try {
+    const existingRaw = await AsyncStorage.getItem(LOCAL_RESERVATIONS_STORAGE_KEY);
+    const existing: StoredLocalReservation[] = existingRaw ? JSON.parse(existingRaw) : [];
+    
+    // Check if reference code already exists
+    const idx = existing.findIndex(r => r.reference_code === res.reference_code);
+    if (idx >= 0) {
+      existing[idx] = res;
+    } else {
+      existing.unshift(res);
+    }
+    
+    await AsyncStorage.setItem(LOCAL_RESERVATIONS_STORAGE_KEY, JSON.stringify(existing));
+  } catch (err) {
+    console.error('Error saving local reservation:', err);
+  }
+}
+
+/**
+ * Loads all locally stored reservations from AsyncStorage.
+ */
+export async function loadLocalReservations(): Promise<StoredLocalReservation[]> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_RESERVATIONS_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Error loading local reservations:', err);
+    return [];
+  }
+}
+

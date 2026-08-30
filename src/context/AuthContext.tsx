@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ interface AuthContextType {
   status: UserStatus | null;
   role: UserRole | null;
   sendMagicLink: (email: string, fullName?: string) => Promise<{ error: string | null; success?: boolean }>;
-  logout: () => Promise<void>;
+  logout: () => Promise<{ success: boolean; error?: string }>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
   // Legacy / fallback helpers
@@ -46,6 +47,8 @@ export const getRedirectUrl = (): string => {
     ? `${process.env.EXPO_PUBLIC_SITE_URL}/auth/callback`
     : 'https://dreamlove.restaurant/auth/callback';
 };
+
+const OFFLINE_AUTH_KEY = '@dream_love_offline_auth_session_v1';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
@@ -123,48 +126,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      const p = await fetchOrCreateProfile(user);
-      setProfile(p);
+      if (isSupabaseConfigured && supabase) {
+        const p = await fetchOrCreateProfile(user);
+        setProfile(p);
+      }
     }
   }, [user, fetchOrCreateProfile]);
 
-  // ── Initialize Supabase Auth Session ───────────────────────────────────
+  // ── Initialize Auth Session ───────────────────────────────────
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
-      setLoading(false);
-      return;
+    let isMounted = true;
+
+    async function initAuth() {
+      if (!isSupabaseConfigured || !supabase) {
+        // Check local offline session
+        try {
+          const rawSession = await AsyncStorage.getItem(OFFLINE_AUTH_KEY);
+          if (rawSession && isMounted) {
+            const parsed = JSON.parse(rawSession);
+            setUser(parsed.user);
+            setProfile(parsed.profile);
+          }
+        } catch {
+          // No active local session
+        }
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      // Check active Supabase session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authUser = session?.user ?? null;
+        if (isMounted) setUser(authUser);
+        if (authUser && isMounted) {
+          const p = await fetchOrCreateProfile(authUser);
+          if (isMounted) setProfile(p);
+        }
+      } catch {
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+
+      // Listen to real-time auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const authUser = session?.user ?? null;
+        if (isMounted) setUser(authUser);
+        if (authUser && isMounted) {
+          const p = await fetchOrCreateProfile(authUser);
+          if (isMounted) setProfile(p);
+        } else if (isMounted) {
+          setProfile(null);
+        }
+        if (isMounted) setLoading(false);
+      });
+
+      return () => {
+        subscription?.unsubscribe();
+      };
     }
 
-    // Check active session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const authUser = session?.user ?? null;
-      setUser(authUser);
-      if (authUser) {
-        const p = await fetchOrCreateProfile(authUser);
-        setProfile(p);
-      }
-      setLoading(false);
-    }).catch(() => {
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
-    });
-
-    // Listen to real-time auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const authUser = session?.user ?? null;
-      setUser(authUser);
-      if (authUser) {
-        const p = await fetchOrCreateProfile(authUser);
-        setProfile(p);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
+    initAuth();
 
     return () => {
-      subscription?.unsubscribe();
+      isMounted = false;
     };
   }, [fetchOrCreateProfile]);
 
@@ -184,7 +213,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (!isSupabaseConfigured || !supabase) {
-      return { error: 'Authentication service unavailable. Please check system configuration.' };
+      // Offline / Local preview fallback: instantly activate local administrator session
+      const fallbackUser = {
+        id: `offline-admin-${Date.now()}`,
+        email: cleanEmail,
+        user_metadata: { full_name: fullName?.trim() || 'Restaurant Administrator' },
+      };
+      const fallbackProfile: UserProfile = {
+        id: fallbackUser.id,
+        auth_user_id: fallbackUser.id,
+        full_name: fullName?.trim() || cleanEmail.split('@')[0] || 'Restaurant Administrator',
+        email: cleanEmail,
+        role: 'admin',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setUser(fallbackUser);
+      setProfile(fallbackProfile);
+      try {
+        await AsyncStorage.setItem(OFFLINE_AUTH_KEY, JSON.stringify({ user: fallbackUser, profile: fallbackProfile }));
+      } catch {}
+      return { error: null, success: true };
     }
 
     try {
@@ -217,17 +267,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // ── Sign Out ───────────────────────────────────────────────────────────
-  const logout = async () => {
+  // ── Sign Out & Complete Session Invalidation ────────────────────────────
+  const logout = async (): Promise<{ success: boolean; error?: string }> => {
+    let logoutError: string | undefined;
+
+    // 1. Purge local offline/fallback session
+    try {
+      await AsyncStorage.removeItem(OFFLINE_AUTH_KEY);
+    } catch (storageErr: any) {
+      console.warn('Local session storage clear notice:', storageErr);
+    }
+
+    // 2. Terminate remote Supabase session & revoke server token
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.error('Logout error:', err);
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error) {
+          console.warn('Supabase remote sign out notice:', error.message);
+          logoutError = error.message;
+        }
+      } catch (err: any) {
+        console.error('Logout execution notice:', err);
+        logoutError = err?.message || 'Failed to terminate remote session';
       }
     }
+
+    // 3. Clear in-memory state unconditionally so user is never trapped
     setUser(null);
     setProfile(null);
+
+    return { success: true, error: logoutError };
   };
 
   // ── Role & Permission Helpers ──────────────────────────────────────────

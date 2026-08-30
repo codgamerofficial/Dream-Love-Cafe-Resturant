@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Utensils, Users, Store } from 'lucide-react-native';
+import { Utensils, Users, Flame, MapPin, Calendar, Clock, ArrowRight } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 
@@ -9,101 +9,121 @@ export default function AboutPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { settings } = useSettings();
-  const isDesktop = width >= 768;
-  const isLargeDesktop = width >= 1024;
+  const isDesktop = width >= 860;
+  const isMobile = width < 600;
 
-  const featureCards = [
-    {
-      icon: Utensils,
-      title: 'Multi-Cuisine Menu',
-      description: 'Indian main courses, dum biryani, tandoori items, Chinese wok dishes, milkshakes, and cafe beverages.',
-    },
+  const highlights = [
     {
       icon: Users,
-      title: 'Casual Family Dining',
+      title: 'Family Friendly Ambiance',
       description: 'Comfortable indoor booth and table seating suitable for families, students, and groups of friends.',
     },
     {
-      icon: Store,
-      title: 'Dine-in, Takeaway & Delivery',
-      description: 'Flexible dining modes with direct WhatsApp ordering and online reservation requests.',
+      icon: Flame,
+      title: 'Freshly Prepared Food',
+      description: 'Traditional clay-oven tandoor, authentic dum biryanis, and Chinese wok dishes prepared fresh to order.',
+    },
+    {
+      icon: Utensils,
+      title: 'Multi-Cuisine Variety',
+      description: 'A curated menu spanning North Indian specialties, tandoor kebabs, fried rice, mocktails, and cafe shakes.',
     },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
-        {/* Hero Header */}
+        {/* Editorial Header */}
         <View style={styles.headerBox}>
-          <Text style={styles.eyebrow}>ABOUT DREAM LOVE</Text>
-          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>About Our Restaurant</Text>
+          <Text style={styles.eyebrow}>OUR STORY</Text>
+          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>
+            A place made for{'\n'}good food & good company.
+          </Text>
           <Text style={styles.subtitle}>
-            Multi-cuisine dining destination located on Contai Bypass Road, Contai, West Bengal.
+            An intimate multi-cuisine dining destination located on Contai Bypass Road, Contai, West Bengal.
           </Text>
         </View>
 
-        {/* Editorial Grid: Photo + Philosophy */}
+        {/* 2-Column Editorial Grid */}
         <View style={[styles.editorialGrid, !isDesktop && styles.editorialGridMobile]}>
-          {/* Left: Real Restaurant Photo */}
+          {/* Left Column: Real Restaurant Photo */}
           <View style={[styles.photoColumn, !isDesktop && styles.photoColumnMobile]}>
             <View style={styles.photoWrapper}>
               <Image
                 source={{ uri: '/photos/interior_dining_counter.jpg' }}
-                style={[styles.heroImage, !isDesktop && styles.heroImageMobile]}
+                style={styles.heroImage}
                 resizeMode="cover"
               />
             </View>
             <Text style={styles.photoCaption}>
-              Dining area at Dream Love Cafe & Restaurant, Contai.
+              Dining counter and guest area at Dream Love Cafe & Restaurant, Contai.
             </Text>
           </View>
 
-          {/* Right: Philosophy + Description */}
+          {/* Right Column: Verified Narrative */}
           <View style={[styles.textColumn, !isDesktop && styles.textColumnMobile]}>
-            <Text style={[styles.sectionTitle, isDesktop && styles.sectionTitleDesktop]}>Our Dining Concept</Text>
+            <Text style={styles.sectionHeading}>Our Dining Concept</Text>
             <Text style={styles.bodyText}>
-              Dream Love Cafe & Restaurant is a local multi-cuisine eatery situated conveniently on Contai Bypass Road opposite Jawed Habib's near Central Bus Stand.
+              Dream Love Cafe & Restaurant was created to provide Contai with a welcoming dining spot where flavor, comfort, and hospitality come together.
             </Text>
             <Text style={styles.bodyText}>
-              Operating daily from {settings.openingHours.replace('Monday - Sunday: ', '')}, we serve lunch, evening refreshments, shakes, and dinner for dine-in, takeaway, and delivery.
+              Located conveniently on Contai Bypass Road opposite Jawed Habib's near the Central Bus Stand, we cater to daily diners, family celebrations, and evening gatherings.
+            </Text>
+            <Text style={styles.bodyText}>
+              Operating daily from 12:00 PM to 12:00 AM, our kitchen offers generous portions across Indian, Tandoor, Chinese, Biryani, and Beverage categories for dine-in, takeaway, and delivery.
             </Text>
           </View>
         </View>
 
-        {/* Feature Cards Grid */}
-        <View style={[
-          styles.cardsGrid,
-          isLargeDesktop && styles.cardsGridDesktop,
-          !isDesktop && styles.cardsGridMobile,
-        ]}>
-          {featureCards.map((card, index) => {
-            const IconComponent = card.icon;
+        {/* 3 Compact Highlights */}
+        <View style={[styles.highlightsGrid, !isDesktop && styles.highlightsGridMobile]}>
+          {highlights.map((item, index) => {
+            const IconComp = item.icon;
             return (
-              <View key={index} style={[styles.featureCard, isLargeDesktop && styles.featureCardDesktop]}>
+              <View key={index} style={styles.highlightCard}>
                 <View style={styles.cardIconBox}>
-                  <IconComponent size={22} color={COLORS.brandTurquoise} />
+                  <IconComp size={20} color={COLORS.brandTurquoise} />
                 </View>
-                <Text style={styles.cardTitle}>{card.title}</Text>
-                <Text style={styles.cardDescription}>{card.description}</Text>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardDescription}>{item.description}</Text>
               </View>
             );
           })}
         </View>
 
-        {/* CTA Banner */}
+        {/* Pre-Footer Action Banner */}
         <View style={styles.ctaBanner}>
-          <Text style={[styles.ctaTitle, isDesktop && styles.ctaTitleDesktop]}>
-            Ready to experience Dream Love?
-          </Text>
+          <Text style={styles.ctaTitle}>Experience Dream Love</Text>
           <Text style={styles.ctaSubtitle}>
-            Explore our complete menu or request a table for your next dining occasion.
+            Explore our complete menu, reserve your table, or come visit us on Contai Bypass Road.
           </Text>
-          <View style={styles.ctaBtnRow}>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/menu')}>
-              <Text style={styles.primaryBtnText}>Explore Complete Menu</Text>
+
+          <View style={styles.ctaButtonsRow}>
+            <TouchableOpacity 
+              style={styles.ctaPrimaryBtn}
+              onPress={() => router.push('/menu')}
+              activeOpacity={0.85}
+            >
+              <Utensils size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.ctaPrimaryBtnText}>Explore Menu</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push('/book')}>
-              <Text style={styles.secondaryBtnText}>Reserve Table</Text>
+
+            <TouchableOpacity 
+              style={styles.ctaSecondaryBtn}
+              onPress={() => router.push('/book')}
+              activeOpacity={0.85}
+            >
+              <Calendar size={15} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+              <Text style={styles.ctaSecondaryBtnText}>Reserve a Table</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.ctaTertiaryBtn}
+              onPress={() => router.push('/visit')}
+              activeOpacity={0.8}
+            >
+              <MapPin size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
+              <Text style={styles.ctaTertiaryBtnText}>Visit Us</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -116,26 +136,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingBottom: SPACING.xxxl,
   },
   innerContainer: {
-    maxWidth: 1200,
+    maxWidth: 1140,
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.xxl,
+    paddingTop: SPACING.xxl,
   },
-
-  // Hero Header
   headerBox: {
     alignItems: 'center',
-    marginBottom: SPACING.xxxl,
+    textAlign: 'center',
+    marginBottom: SPACING.xxl,
   },
   eyebrow: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: '700',
     color: COLORS.copper,
-    letterSpacing: 3,
-    marginBottom: 8,
+    letterSpacing: 2,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
@@ -143,25 +164,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
+    letterSpacing: -0.5,
+    lineHeight: 44,
     marginBottom: 10,
   },
   titleDesktop: {
-    fontSize: 52,
+    fontSize: 44,
+    lineHeight: 52,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textMuted,
     textAlign: 'center',
-    maxWidth: 640,
-    lineHeight: 24,
+    maxWidth: 620,
+    lineHeight: 23,
   },
-
-  // Editorial Grid
   editorialGrid: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 48,
-    alignItems: 'flex-start',
-    marginBottom: SPACING.xxxl,
+    marginBottom: SPACING.xxl,
   },
   editorialGridMobile: {
     flexDirection: 'column',
@@ -174,152 +196,155 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   photoWrapper: {
-    borderRadius: BORDER_RADIUS.xl,
+    height: 380,
+    borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    backgroundColor: COLORS.surface,
-  },
-  heroImage: {
-    width: '100%',
-    height: 400,
-  },
-  heroImageMobile: {
-    height: 240,
-  },
-  photoCaption: {
-    fontSize: 13,
-    color: COLORS.textSubtle,
-    fontStyle: 'italic',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  textColumn: {
-    flex: 1,
-    paddingTop: 8,
-  },
-  textColumnMobile: {
-    width: '100%',
-  },
-  sectionTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.cream,
-    marginBottom: SPACING.md,
-  },
-  sectionTitleDesktop: {
-    fontSize: 34,
-  },
-  bodyText: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: COLORS.creamMuted,
-    marginBottom: SPACING.md,
-  },
-
-  // Feature Cards
-  cardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 20,
-    marginBottom: SPACING.xxxl,
-  },
-  cardsGridDesktop: {
-    flexWrap: 'nowrap',
-  },
-  cardsGridMobile: {
-    flexDirection: 'column',
-  },
-  featureCard: {
-    flex: 1,
-    minWidth: 240,
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
     ...SHADOWS.card,
   },
-  featureCardDesktop: {
-    minWidth: 0,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoCaption: {
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  textColumn: {
+    flex: 1.1,
+  },
+  textColumnMobile: {
+    width: '100%',
+  },
+  sectionHeading: {
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: 14,
+  },
+  bodyText: {
+    fontSize: 15,
+    color: COLORS.creamMuted,
+    lineHeight: 24,
+    marginBottom: 14,
+  },
+  highlightsGrid: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: SPACING.xxl,
+  },
+  highlightsGridMobile: {
+    flexDirection: 'column',
+    gap: 14,
+  },
+  highlightCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
   },
   cardIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(45, 212, 191, 0.1)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 12,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 6,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textMuted,
-    lineHeight: 21,
+    lineHeight: 19,
   },
-
-  // CTA Banner
   ctaBanner: {
     backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xxl,
+    borderRadius: 22,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
     alignItems: 'center',
+    textAlign: 'center',
     borderWidth: 1,
-    borderColor: COLORS.brandTurquoise + '25',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    ...SHADOWS.card,
   },
   ctaTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 8,
     textAlign: 'center',
   },
-  ctaTitleDesktop: {
-    fontSize: 32,
-  },
   ctaSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textMuted,
+    maxWidth: 540,
     textAlign: 'center',
+    lineHeight: 21,
     marginBottom: SPACING.xl,
-    maxWidth: 500,
   },
-  ctaBtnRow: {
+  ctaButtonsRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  primaryBtn: {
+  ctaPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.brandHeart,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
     borderRadius: BORDER_RADIUS.md,
   },
-  primaryBtnText: {
+  ctaPrimaryBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
-  secondaryBtn: {
-    backgroundColor: 'transparent',
+  ctaSecondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    borderColor: COLORS.brandTurquoise + '60',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: BORDER_RADIUS.md,
   },
-  secondaryBtnText: {
+  ctaSecondaryBtnText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ctaTertiaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  ctaTertiaryBtnText: {
     color: COLORS.cream,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

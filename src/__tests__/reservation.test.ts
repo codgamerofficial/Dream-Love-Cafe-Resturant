@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+
 import {
   formatTime12Hour,
   formatDisplayDate,
@@ -96,6 +99,34 @@ describe('Reservation Utilities', () => {
 
       expect(url).toContain('https://calendar.google.com/calendar/render');
       expect(url).toContain('Dream%20Love%20Cafe');
+    });
+  });
+
+  describe('Local Reservation Persistence & Long Content Support', () => {
+    it('saves and loads reservations with long special requests', async () => {
+      const { saveLocalReservation, loadLocalReservations } = require('../utils/reservation');
+      
+      const sampleReservation = {
+        reference_code: 'DL-LONG99',
+        name: 'Saswata Dey',
+        phone: '+919933388167',
+        date: '2026-08-30',
+        time: '20:00',
+        guests: 6,
+        special_request: 'Birthday celebration, vegetarian guest, preferred quiet corner table and accessibility consideration.',
+        status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        source: 'website',
+      };
+
+      await saveLocalReservation(sampleReservation);
+      const loaded = await loadLocalReservations();
+
+      const found = loaded.find((r: any) => r.reference_code === 'DL-LONG99');
+      expect(found).toBeDefined();
+      expect(found?.name).toBe('Saswata Dey');
+      expect(found?.special_request).toBe('Birthday celebration, vegetarian guest, preferred quiet corner table and accessibility consideration.');
+      expect(found?.guests).toBe(6);
     });
   });
 });

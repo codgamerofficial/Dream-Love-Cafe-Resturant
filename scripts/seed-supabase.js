@@ -22,9 +22,9 @@ async function seed() {
     }
 
     console.log('✅ Supabase tables verified!');
-    console.log('Seeding initial restaurant settings and canonical menu items...');
+    console.log('Seeding initial restaurant settings and canonical data...');
 
-    // Seed Restaurant Settings
+    // 1. Seed Restaurant Settings
     await supabase.from('restaurant_settings').upsert({
       name: "Dream Love Cafe & Restaurant",
       tagline: "Multi-Cuisine Family Cafe & Restaurant",
@@ -53,6 +53,26 @@ async function seed() {
       magicpin_rating: 4.1,
       magicpin_url: "https://magicpin.in/Contai/Dream-Love-Cafe-And-Restaurant",
     });
+    console.log('✅ Restaurant Settings seeded.');
+
+    // 2. Seed Initial Menu Categories
+    const categories = [
+      { slug: 'special-dishes', name: 'Special Dishes', display_order: 1 },
+      { slug: 'soup', name: 'Soup', display_order: 2 },
+      { slug: 'starters', name: 'Starters', display_order: 3 },
+      { slug: 'chowmein-noodles', name: 'Chowmein & Noodles', display_order: 4 },
+      { slug: 'rice-biryani', name: 'Rice & Biryani', display_order: 5 },
+      { slug: 'indian-main-course', name: 'Indian Main Course', display_order: 6 },
+      { slug: 'tandoor-kebabs', name: 'Tandoor & Kebabs', display_order: 7 },
+      { slug: 'chinese-main-course', name: 'Chinese Main Course', display_order: 8 },
+      { slug: 'rolls-snacks', name: 'Rolls & Quick Bites', display_order: 9 },
+      { slug: 'beverages-dessert', name: 'Mocktails & Desserts', display_order: 10 },
+    ];
+
+    for (const cat of categories) {
+      await supabase.from('menu_categories').upsert(cat, { onConflict: 'slug' });
+    }
+    console.log(`✅ ${categories.length} Menu Categories seeded.`);
 
     console.log('✅ Seeding complete!');
   } catch (err) {

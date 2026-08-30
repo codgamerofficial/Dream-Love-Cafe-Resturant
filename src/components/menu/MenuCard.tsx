@@ -1,10 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from 'react-native';
-import { Plus, Minus, Check, Sparkles, UtensilsCrossed, CookingPot, Flame, Fish, Wheat, Salad, GlassWater, Coffee, Clock } from 'lucide-react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Plus, Minus, Sparkles, UtensilsCrossed, CookingPot, Flame, Fish, Wheat, Salad, GlassWater, Coffee } from 'lucide-react-native';
 import { MenuItem } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme';
 import { useCart } from '../../context/CartContext';
-import { useSettings } from '../../context/SettingsContext';
 
 interface MenuCardProps {
   item: MenuItem;
@@ -12,7 +11,6 @@ interface MenuCardProps {
 
 export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
   const { items, addItem, incrementQuantity, decrementQuantity } = useCart();
-  const { settings } = useSettings();
 
   const cartEntry = items.find((i) => i.menuItem.id === item.id);
   const quantity = cartEntry ? cartEntry.quantity : 0;
@@ -33,28 +31,39 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
 
   // Get appropriate category icon when no image exists
   const getCategoryIcon = () => {
-    switch (item.category) {
+    switch ((item.category || '') as string) {
+      case 'biryani':
       case 'biryani-rice':
         return <CookingPot size={32} color={COLORS.gold} />;
+      case 'tandoori':
       case 'tandoori-kebabs':
         return <Flame size={32} color={COLORS.brandHeart} />;
+      case 'seafood':
       case 'seafood-fish':
         return <Fish size={32} color={COLORS.brandTurquoise} />;
+      case 'bread':
       case 'breads-kulchas':
         return <Wheat size={32} color={COLORS.copper} />;
-      case 'soups':
+      case 'salad':
+      case 'soup':
+      case 'veg':
       case 'main-course-veg':
         return <Salad size={32} color={COLORS.vegGreen} />;
+      case 'mocktail':
+      case 'shake':
+      case 'fresh-juice':
       case 'beverages-shakes-mocktails':
         return <GlassWater size={32} color={COLORS.brandTurquoise} />;
+      case 'hot-drinks':
+        return <Coffee size={32} color={COLORS.copperLight} />;
       default:
         return <UtensilsCrossed size={32} color={COLORS.copper} />;
     }
   };
 
-  const imageUrl = item.image_url || item.image;
-  const isMockImage = item.image_type === 'mock_placeholder';
-  const showSampleBadge = Boolean(settings.showSampleBadges && isMockImage);
+  const [imageError, setImageError] = React.useState(false);
+  const rawImageUrl = item.image_url || item.image;
+  const imageUrl = imageError ? null : rawImageUrl;
 
   return (
     <View style={[styles.cardContainer, !item.isAvailable && styles.cardUnavailable]}>
@@ -65,6 +74,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             source={{ uri: imageUrl }}
             style={styles.image}
             resizeMode="cover"
+            onError={() => setImageError(true)}
           />
           <View style={styles.imageOverlay} />
 
@@ -80,13 +90,6 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             <View style={styles.featuredBadge}>
               <Sparkles size={9} color="#FFFFFF" style={{ marginRight: 3 }} />
               <Text style={styles.featuredBadgeText}>SPECIAL</Text>
-            </View>
-          )}
-
-          {/* Sample Preview Tag (Only when enabled in settings) */}
-          {showSampleBadge && !item.isFeatured && (
-            <View style={styles.sampleBadge}>
-              <Text style={styles.sampleBadgeText}>Sample</Text>
             </View>
           )}
 
@@ -159,11 +162,6 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             <Text style={[styles.priceText, (!item.price || item.price === 0) && styles.askPriceText]}>
               {renderPriceText()}
             </Text>
-            {item.price_source && (
-              <Text style={styles.priceSourceTag}>
-                {item.price_verified ? '✓ Verified' : 'Menu Price'}
-              </Text>
-            )}
           </View>
 
           {/* Add to Order / Quantity Counter */}
@@ -175,11 +173,11 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => addItem(item)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel={`Add ${item.name} to order`}
             >
-              <Plus size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Plus size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
               <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           ) : (
@@ -191,7 +189,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
                 accessibilityRole="button"
                 accessibilityLabel="Decrease quantity"
               >
-                <Minus size={13} color={COLORS.cream} />
+                <Minus size={12} color={COLORS.cream} />
               </TouchableOpacity>
 
               <Text style={styles.qtyText}>{quantity}</Text>
@@ -203,7 +201,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
                 accessibilityRole="button"
                 accessibilityLabel="Increase quantity"
               >
-                <Plus size={13} color={COLORS.cream} />
+                <Plus size={12} color={COLORS.cream} />
               </TouchableOpacity>
             </View>
           )}
@@ -226,10 +224,10 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   cardUnavailable: {
-    opacity: 0.65,
+    opacity: 0.6,
   },
   imageContainer: {
-    height: 165,
+    height: 170,
     width: '100%',
     position: 'relative',
     backgroundColor: COLORS.surface,
@@ -244,10 +242,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.15)',
+    backgroundColor: 'rgba(18, 15, 14, 0.12)',
   },
   placeholderContainer: {
-    height: 90,
+    height: 95,
     width: '100%',
     position: 'relative',
     backgroundColor: COLORS.surface,
@@ -315,28 +313,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  sampleBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(26, 22, 21, 0.85)',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-    zIndex: 5,
-  },
-  sampleBadgeText: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: '600',
-  },
   spicyBadge: {
     position: 'absolute',
     bottom: 8,
     left: 8,
-    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
@@ -403,12 +384,12 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 12,
     color: COLORS.creamMuted,
-    lineHeight: 16,
+    lineHeight: 17,
     marginBottom: SPACING.sm,
   },
   footerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 8,
     borderTopWidth: 1,
@@ -428,11 +409,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: COLORS.textMuted,
     fontWeight: '600',
-  },
-  priceSourceTag: {
-    fontSize: 9,
-    color: COLORS.textSubtle,
-    marginTop: 1,
   },
   addButton: {
     flexDirection: 'row',
