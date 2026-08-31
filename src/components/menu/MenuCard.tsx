@@ -1,19 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Plus, Minus, Sparkles, UtensilsCrossed, CookingPot, Flame, Fish, Wheat, Salad, GlassWater, Coffee } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from 'react-native';
+import { Plus, Minus, Sparkles, UtensilsCrossed, CookingPot, Flame, Fish, Wheat, Salad, GlassWater, Coffee, Check } from 'lucide-react-native';
 import { MenuItem } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme';
 import { useCart } from '../../context/CartContext';
 
 interface MenuCardProps {
   item: MenuItem;
+  variant?: 'standard' | 'hero';
 }
 
-export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
+export const MenuCard: React.FC<MenuCardProps> = ({ item, variant = 'standard' }) => {
   const { items, addItem, incrementQuantity, decrementQuantity } = useCart();
+  const [imageError, setImageError] = useState(false);
 
   const cartEntry = items.find((i) => i.menuItem.id === item.id);
   const quantity = cartEntry ? cartEntry.quantity : 0;
+  const isHero = variant === 'hero';
 
   // Format authentic price according to specifications
   const renderPriceText = () => {
@@ -29,47 +32,45 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
     return 'Price on request';
   };
 
-  // Get appropriate category icon when no image exists
+  // Get category illustration when image is unavailable
   const getCategoryIcon = () => {
-    switch ((item.category || '') as string) {
-      case 'biryani':
-      case 'biryani-rice':
-        return <CookingPot size={32} color={COLORS.gold} />;
-      case 'tandoori':
-      case 'tandoori-kebabs':
-        return <Flame size={32} color={COLORS.brandHeart} />;
-      case 'seafood':
-      case 'seafood-fish':
-        return <Fish size={32} color={COLORS.brandTurquoise} />;
-      case 'bread':
-      case 'breads-kulchas':
-        return <Wheat size={32} color={COLORS.copper} />;
-      case 'salad':
-      case 'soup':
-      case 'veg':
-      case 'main-course-veg':
-        return <Salad size={32} color={COLORS.vegGreen} />;
-      case 'mocktail':
-      case 'shake':
-      case 'fresh-juice':
-      case 'beverages-shakes-mocktails':
-        return <GlassWater size={32} color={COLORS.brandTurquoise} />;
-      case 'hot-drinks':
-        return <Coffee size={32} color={COLORS.copperLight} />;
-      default:
-        return <UtensilsCrossed size={32} color={COLORS.copper} />;
+    const cat = ((item.category || '') as string).toLowerCase();
+    if (cat.includes('biryani')) {
+      return <CookingPot size={36} color={COLORS.gold} />;
     }
+    if (cat.includes('tandoor') || cat.includes('kebab')) {
+      return <Flame size={36} color={COLORS.brandHeart} />;
+    }
+    if (cat.includes('fish') || cat.includes('seafood') || cat.includes('prawn')) {
+      return <Fish size={36} color={COLORS.brandTurquoise} />;
+    }
+    if (cat.includes('bread') || cat.includes('roti') || cat.includes('naan')) {
+      return <Wheat size={36} color={COLORS.copper} />;
+    }
+    if (cat.includes('salad') || cat.includes('soup') || cat.includes('veg')) {
+      return <Salad size={36} color={COLORS.vegGreen} />;
+    }
+    if (cat.includes('mocktail') || cat.includes('shake') || cat.includes('juice') || cat.includes('beverage')) {
+      return <GlassWater size={36} color={COLORS.brandTurquoise} />;
+    }
+    if (cat.includes('tea') || cat.includes('coffee') || cat.includes('hot-drink')) {
+      return <Coffee size={36} color={COLORS.copperLight} />;
+    }
+    return <UtensilsCrossed size={36} color={COLORS.copper} />;
   };
 
-  const [imageError, setImageError] = React.useState(false);
   const rawImageUrl = item.image_url || item.image;
   const imageUrl = imageError ? null : rawImageUrl;
 
   return (
-    <View style={[styles.cardContainer, !item.isAvailable && styles.cardUnavailable]}>
+    <View style={[
+      styles.cardContainer, 
+      isHero && styles.heroCardContainer,
+      !item.isAvailable && styles.cardUnavailable
+    ]}>
       {/* 1. VISUAL FOOD HEADER */}
       {imageUrl ? (
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, isHero && styles.heroImageContainer]}>
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
@@ -78,14 +79,20 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
           />
           <View style={styles.imageOverlay} />
 
-          {/* Veg / Non-Veg / Egg Indicator Badge */}
+          {/* Dietary Indicator Badge */}
           <View style={styles.badgeTopLeft}>
-            <View style={[styles.vegBadge, item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg]}>
-              <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg]} />
+            <View style={[
+              styles.vegBadge, 
+              item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg
+            ]}>
+              <View style={[
+                styles.vegDot, 
+                item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg
+              ]} />
             </View>
           </View>
 
-          {/* Featured / Special Tag */}
+          {/* Featured / Chef Special Tag */}
           {item.isFeatured && (
             <View style={styles.featuredBadge}>
               <Sparkles size={9} color="#FFFFFF" style={{ marginRight: 3 }} />
@@ -100,7 +107,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             </View>
           )}
 
-          {/* Portion Tag if exists */}
+          {/* Portion Tag if present */}
           {item.portion && (
             <View style={styles.portionBadge}>
               <Text style={styles.portionBadgeText}>{item.portion}</Text>
@@ -108,20 +115,26 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
           )}
         </View>
       ) : (
-        /* Neutral Category Visual when no image exists */
-        <View style={styles.placeholderContainer}>
+        /* Neutral Category Visual placeholder when no photo exists */
+        <View style={[styles.placeholderContainer, isHero && styles.heroPlaceholderContainer]}>
           <View style={styles.placeholderPattern}>
             {getCategoryIcon()}
           </View>
 
           {/* Dietary Indicator Badge */}
           <View style={styles.badgeTopLeft}>
-            <View style={[styles.vegBadge, item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg]}>
-              <View style={[styles.vegDot, item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg]} />
+            <View style={[
+              styles.vegBadge, 
+              item.isVeg ? styles.vegBadgeVeg : item.isEgg ? styles.vegBadgeEgg : styles.vegBadgeNonVeg
+            ]}>
+              <View style={[
+                styles.vegDot, 
+                item.isVeg ? styles.vegDotVeg : item.isEgg ? styles.vegDotEgg : styles.vegDotNonVeg
+              ]} />
             </View>
           </View>
 
-          {/* Subcategory Pill */}
+          {/* Subcategory Tag */}
           {item.subcategory && (
             <View style={styles.subcategoryBadge}>
               <Text style={styles.subcategoryBadgeText}>{item.subcategory}</Text>
@@ -138,28 +151,35 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
       )}
 
       {/* 2. CARD CONTENT DETAILS */}
-      <View style={styles.contentContainer}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={2}>
-            {item.name}
-          </Text>
-          {item.canonical_name && item.canonical_name !== item.name && (
-            <Text style={styles.canonicalSubtitle} numberOfLines={1}>
-              ({item.canonical_name})
+      <View style={[styles.contentContainer, isHero && styles.heroContentContainer]}>
+        {/* Top Content Body: Title, Subtitle, Description */}
+        <View style={styles.cardBody}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, isHero && styles.heroTitle]} numberOfLines={2}>
+              {item.name}
             </Text>
-          )}
+            {item.canonical_name && item.canonical_name !== item.name && (
+              <Text style={styles.canonicalSubtitle} numberOfLines={1}>
+                ({item.canonical_name})
+              </Text>
+            )}
+          </View>
+
+          {item.description ? (
+            <Text style={[styles.description, isHero && styles.heroDescription]} numberOfLines={isHero ? 3 : 2}>
+              {item.description}
+            </Text>
+          ) : null}
         </View>
 
-        {item.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
-
         {/* 3. PRICE & ACTION FOOTER */}
-        <View style={styles.footerRow}>
+        <View style={[styles.footerRow, isHero && styles.heroFooterRow]}>
           <View style={styles.priceContainer}>
-            <Text style={[styles.priceText, (!item.price || item.price === 0) && styles.askPriceText]}>
+            <Text style={[
+              styles.priceText, 
+              isHero && styles.heroPriceText,
+              (!item.price || item.price === 0) && styles.askPriceText
+            ]}>
               {renderPriceText()}
             </Text>
           </View>
@@ -171,14 +191,14 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             </View>
           ) : quantity === 0 ? (
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, isHero && styles.heroAddButton]}
               onPress={() => addItem(item)}
               activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel={`Add ${item.name} to order`}
             >
-              <Plus size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.addButtonText}>Add</Text>
+              <Plus size={isHero ? 14 : 13} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={[styles.addButtonText, isHero && styles.heroAddButtonText]}>Add</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.quantityControl}>
@@ -221,16 +241,23 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'space-between',
     height: '100%',
+    width: '100%',
     ...SHADOWS.card,
+  },
+  heroCardContainer: {
+    borderColor: COLORS.borderLight,
   },
   cardUnavailable: {
     opacity: 0.6,
   },
   imageContainer: {
-    height: 170,
+    height: 175,
     width: '100%',
     position: 'relative',
     backgroundColor: COLORS.surface,
+  },
+  heroImageContainer: {
+    height: 300,
   },
   image: {
     width: '100%',
@@ -242,35 +269,40 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.12)',
+    backgroundColor: 'rgba(18, 15, 14, 0.15)',
   },
   placeholderContainer: {
-    height: 95,
+    height: 110,
     width: '100%',
     position: 'relative',
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.surfaceMuted,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroPlaceholderContainer: {
+    height: 220,
   },
   placeholderPattern: {
-    opacity: 0.35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.85,
   },
   badgeTopLeft: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    zIndex: 5,
+    top: 10,
+    left: 10,
+    zIndex: 2,
   },
   vegBadge: {
     width: 17,
     height: 17,
-    borderWidth: 1.5,
     borderRadius: 3,
-    backgroundColor: 'rgba(26, 22, 21, 0.92)',
-    justifyContent: 'center',
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(26, 22, 21, 0.90)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   vegBadgeVeg: {
     borderColor: COLORS.vegGreen,
@@ -279,7 +311,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.nonVegRed,
   },
   vegBadgeEgg: {
-    borderColor: COLORS.gold,
+    borderColor: COLORS.eggYellow,
   },
   vegDot: {
     width: 7,
@@ -293,172 +325,224 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.nonVegRed,
   },
   vegDotEgg: {
-    backgroundColor: COLORS.gold,
+    backgroundColor: COLORS.eggYellow,
   },
   featuredBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    top: 10,
+    right: 10,
     backgroundColor: COLORS.brandHeart,
     paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: BORDER_RADIUS.sm,
-    zIndex: 5,
+    paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 2,
   },
   featuredBadgeText: {
     color: '#FFFFFF',
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   spicyBadge: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(18, 15, 14, 0.85)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: BORDER_RADIUS.xs,
     borderWidth: 1,
-    borderColor: COLORS.nonVegRed + '60',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   spicyBadgeText: {
-    color: '#FFAAAA',
-    fontSize: 9.5,
+    color: '#FF7043',
+    fontSize: 9,
     fontWeight: '700',
-  },
-  subcategoryBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: COLORS.surfaceElevated,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  subcategoryBadgeText: {
-    color: COLORS.brandTurquoise,
-    fontSize: 10,
-    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   portionBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(18, 15, 14, 0.88)',
-    paddingHorizontal: 6,
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: BORDER_RADIUS.xs,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
   portionBadgeText: {
-    color: COLORS.gold,
+    color: COLORS.creamMuted,
     fontSize: 10,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  subcategoryBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.xs,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  subcategoryBadgeText: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   contentContainer: {
     padding: SPACING.md,
     flex: 1,
+    flexDirection: 'column',
     justifyContent: 'space-between',
   },
+  heroContentContainer: {
+    padding: SPACING.lg,
+  },
+  cardBody: {
+    flexDirection: 'column',
+  },
   titleRow: {
-    marginBottom: 4,
+    marginBottom: 5,
   },
   title: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.cream,
     lineHeight: 20,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  heroTitle: {
+    fontSize: 19,
+    lineHeight: 25,
+    fontWeight: '800',
   },
   canonicalSubtitle: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: 1,
+    fontSize: 11.5,
+    color: COLORS.textSubtle,
+    marginTop: 2,
+    fontStyle: 'italic',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   description: {
-    fontSize: 12,
-    color: COLORS.creamMuted,
+    fontSize: 12.5,
+    color: COLORS.textMuted,
     lineHeight: 17,
-    marginBottom: SPACING.sm,
+    marginBottom: 8,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  heroDescription: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: COLORS.creamMuted,
+    marginBottom: 10,
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    marginTop: 'auto',
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  heroFooterRow: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopColor: COLORS.borderSubtle,
   },
   priceContainer: {
-    flexDirection: 'column',
+    flex: 1,
   },
   priceText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
+    color: COLORS.copperLight,
+    letterSpacing: 0.2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  heroPriceText: {
+    fontSize: 18,
     color: COLORS.gold,
-    letterSpacing: 0.3,
   },
   askPriceText: {
-    fontSize: 12.5,
-    color: COLORS.textMuted,
-    fontWeight: '600',
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    fontWeight: '500',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: COLORS.brandHeart,
-    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.md,
-    minHeight: 32,
+    paddingHorizontal: 13,
+    borderRadius: BORDER_RADIUS.sm,
     shadowColor: COLORS.brandHeart,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 2,
   },
+  heroAddButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: BORDER_RADIUS.md,
+  },
   addButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  heroAddButtonText: {
+    fontSize: 13.5,
   },
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.brandHeart,
-    overflow: 'hidden',
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    gap: 6,
   },
   qtyBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    backgroundColor: COLORS.brandHeart + '25',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   qtyText: {
     color: COLORS.cream,
     fontSize: 12.5,
-    fontWeight: '800',
-    paddingHorizontal: 8,
+    fontWeight: '700',
+    minWidth: 14,
+    textAlign: 'center',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   unavailableBadge: {
-    backgroundColor: COLORS.border,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   unavailableText: {
-    color: COLORS.textMuted,
+    color: COLORS.textSubtle,
     fontSize: 11,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

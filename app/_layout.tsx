@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { CartProvider } from '../src/context/CartContext';
@@ -14,6 +14,8 @@ import { COLORS } from '../src/theme';
 
 export default function RootLayout() {
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const isAdminOrAuthRoute = pathname.startsWith('/admin') || pathname.startsWith('/auth');
 
   return (
@@ -35,7 +37,10 @@ export default function RootLayout() {
             ) : (
               <ScrollView
                 style={styles.mainScroll}
-                contentContainerStyle={styles.mainScrollContent}
+                contentContainerStyle={[
+                  styles.mainScrollContent,
+                  isMobile && styles.mainScrollContentMobile,
+                ]}
                 showsVerticalScrollIndicator={true}
               >
                 <View style={styles.slotWrapper}>
@@ -63,19 +68,25 @@ const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
-    height: Platform.OS === 'web' ? ('100vh' as any) : '100%',
+    minHeight: Platform.OS === 'web' ? ('100vh' as any) : '100%',
+    width: '100%',
   },
   adminSlotWrapper: {
     flex: 1,
   },
   mainScroll: {
     flex: 1,
+    width: '100%',
   },
   mainScrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
   },
+  mainScrollContentMobile: {
+    paddingBottom: 68,
+  },
   slotWrapper: {
     flex: 1,
+    width: '100%',
   },
 });

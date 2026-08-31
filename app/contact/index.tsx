@@ -2,14 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, useWindowDimensions, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MapPin, Phone, Clock, MessageSquare, ExternalLink, Calendar, ShoppingBag, Compass, Navigation } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 
 export default function ContactPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { settings } = useSettings();
-  const isDesktop = width >= 768;
+  const isDesktop = width >= 860;
+  const isMobile = width < 600;
 
   // Google Maps embed URL using Plus Code
   const mapQuery = encodeURIComponent('Dream Love Cafe & Restaurant, QPHM+8QV, Contai, West Bengal 721404, India');
@@ -39,24 +40,24 @@ export default function ContactPage() {
         {/* Header */}
         <View style={styles.headerBox}>
           <Text style={styles.eyebrow}>CONTAI, WEST BENGAL</Text>
-          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>Visit Dream Love</Text>
+          <Text style={[styles.title, !isDesktop && styles.titleMobile]}>Visit Dream Love</Text>
           <Text style={styles.subtitle}>
-            Multi-Cuisine Family Cafe & Restaurant. Located at Central Bus Stand, Contai Bypass Road.
+            Multi-Cuisine Family Café & Restaurant located near Central Bus Stand on Contai Bypass Road.
           </Text>
         </View>
 
         {/* Main Content Grid */}
         <View style={[styles.contentGrid, !isDesktop && styles.contentGridMobile]}>
 
-          {/* Left Column: Location & Map */}
-          <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile]}>
+          {/* Left Column: Location, Map & Storefront Photo */}
+          <View style={[styles.mainColumn, !isDesktop && styles.columnFullWidth]}>
 
             {/* Google Maps Embed Card */}
             <View style={styles.mapCard}>
               <Text style={styles.cardTitle}>Location & Directions</Text>
 
               {/* Interactive Google Map */}
-              <View style={[styles.mapContainer, !isDesktop && styles.mapContainerMobile]}>
+              <View style={styles.mapContainer}>
                 {Platform.OS === 'web' ? (
                   <iframe
                     src={googleMapsEmbedUrl}
@@ -84,33 +85,45 @@ export default function ContactPage() {
 
               {/* Map Action Buttons */}
               <View style={styles.mapActionsRow}>
-                <TouchableOpacity style={styles.mapBtnPrimary} onPress={handleOpenMaps}>
-                  <ExternalLink size={15} color={COLORS.background} style={{ marginRight: 6 }} />
-                  <Text style={styles.mapBtnPrimaryText}>View on Google Maps</Text>
+                <TouchableOpacity style={styles.mapBtnPrimary} onPress={handleGetDirections} activeOpacity={0.85}>
+                  <Navigation size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.mapBtnPrimaryText}>Get Directions</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.mapBtnSecondary} onPress={handleGetDirections}>
-                  <Navigation size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
-                  <Text style={styles.mapBtnSecondaryText}>Get Directions</Text>
+                <TouchableOpacity style={styles.mapBtnSecondary} onPress={handleOpenMaps} activeOpacity={0.85}>
+                  <ExternalLink size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
+                  <Text style={styles.mapBtnSecondaryText}>View on Google Maps</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Restaurant Info Card */}
-            <View style={styles.infoCard}>
-              {/* Real Storefront Photo */}
+            {/* Real Storefront Photo Card */}
+            <View style={styles.storefrontCard}>
               <View style={styles.storefrontBox}>
                 <Image
                   source={{ uri: '/photos/storefront_signboard.jpg' }}
                   style={styles.storefrontImage}
                   resizeMode="cover"
                 />
-                <Text style={styles.storefrontCaption}>
-                  Dream Love Cafe & Restaurant storefront on Contai Bypass Road.
-                </Text>
+                <View style={styles.storefrontOverlay} />
+                <View style={styles.storefrontBadge}>
+                  <Text style={styles.storefrontBadgeText}>Contai Bypass Road</Text>
+                </View>
               </View>
+              <Text style={styles.storefrontCaption}>
+                Storefront & neon signboard of Dream Love Cafe & Restaurant opposite Jawed Habib's.
+              </Text>
+            </View>
+          </View>
+
+          {/* Right Column: Actions + Specs + Contact */}
+          <View style={[styles.sideColumn, !isDesktop && styles.columnFullWidth]}>
+
+            {/* Restaurant Info Card */}
+            <View style={styles.infoCard}>
+              <Text style={styles.cardTitle}>Restaurant Details</Text>
 
               <View style={styles.infoRow}>
-                <MapPin size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <MapPin size={18} color={COLORS.copper} style={styles.infoIcon} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoLabel}>Address</Text>
                   <Text style={styles.infoValue}>{settings.address}</Text>
@@ -119,7 +132,7 @@ export default function ContactPage() {
               </View>
 
               <View style={styles.infoRow}>
-                <Clock size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <Clock size={18} color={COLORS.brandTurquoise} style={styles.infoIcon} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoLabel}>Opening Hours</Text>
                   <Text style={styles.infoValue}>{settings.openingHours}</Text>
@@ -127,60 +140,50 @@ export default function ContactPage() {
               </View>
 
               <View style={styles.infoRow}>
-                <Phone size={20} color={COLORS.brandTurquoise} style={styles.infoIcon} />
+                <Phone size={18} color={COLORS.gold} style={styles.infoIcon} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.infoLabel}>Telephone & WhatsApp</Text>
+                  <Text style={styles.infoLabel}>Phone & WhatsApp</Text>
                   <Text style={styles.infoValue}>{settings.phone}</Text>
                 </View>
               </View>
             </View>
-          </View>
 
-          {/* Right Column: Actions + Specs */}
-          <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile]}>
-
-            {/* Instant Actions */}
+            {/* Quick Actions Card */}
             <View style={styles.actionsCard}>
               <Text style={styles.cardTitle}>Quick Actions</Text>
 
               {/* Primary: Reserve */}
-              <TouchableOpacity style={styles.actionPrimary} onPress={() => router.push('/book')}>
-                <Calendar size={18} color={COLORS.background} style={{ marginRight: 8 }} />
+              <TouchableOpacity style={styles.actionPrimary} onPress={() => router.push('/book')} activeOpacity={0.85}>
+                <Calendar size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
                 <Text style={styles.actionPrimaryText}>Reserve Table Online</Text>
               </TouchableOpacity>
 
               {/* Secondary: WhatsApp */}
-              <TouchableOpacity style={styles.actionWhatsApp} onPress={handleWhatsApp}>
-                <MessageSquare size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <TouchableOpacity style={styles.actionWhatsApp} onPress={handleWhatsApp} activeOpacity={0.85}>
+                <MessageSquare size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
                 <Text style={styles.actionWhatsAppText}>Order / Chat on WhatsApp</Text>
               </TouchableOpacity>
 
               {/* Utility buttons */}
-              <TouchableOpacity style={styles.actionUtility} onPress={handleCall}>
+              <TouchableOpacity style={styles.actionUtility} onPress={handleCall} activeOpacity={0.8}>
                 <Phone size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
-                <Text style={styles.actionUtilityText}>Call Restaurant</Text>
+                <Text style={styles.actionUtilityText}>Call Restaurant Directly</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionUtility} onPress={handleGetDirections}>
-                <Compass size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
-                <Text style={styles.actionUtilityText}>Get Directions</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionUtility} onPress={() => router.push('/menu')}>
+              <TouchableOpacity style={styles.actionUtility} onPress={() => router.push('/menu')} activeOpacity={0.8}>
                 <ShoppingBag size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
                 <Text style={styles.actionUtilityText}>Browse Complete Menu</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Dining Specs */}
+            {/* Dining Specs Card */}
             <View style={styles.specsCard}>
-              <Text style={styles.specsTitle}>Dining & Pricing</Text>
+              <Text style={styles.specsTitle}>Dining & Amenities</Text>
 
               <View style={styles.specRow}>
                 <Text style={styles.specLabel}>Typical spend for two:</Text>
                 <Text style={styles.specValue}>{settings.priceRangeForTwo}</Text>
               </View>
-              <Text style={styles.specDisclaimer}>Based on public listings</Text>
 
               <View style={styles.specRow}>
                 <Text style={styles.specLabel}>Dining Modes:</Text>
@@ -201,122 +204,118 @@ export default function ContactPage() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     backgroundColor: COLORS.background,
+    minHeight: '100%',
+    paddingBottom: SPACING.giant,
   },
   innerContainer: {
-    maxWidth: 1240,
+    maxWidth: LAYOUT.maxContainerWidth,
     width: '100%',
-    alignSelf: 'center',
+    marginHorizontal: 'auto',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.xxl,
+    paddingTop: SPACING.xxl,
   },
-
-  // Header
   headerBox: {
     alignItems: 'center',
+    textAlign: 'center',
     marginBottom: SPACING.xxl,
   },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.copper,
-    letterSpacing: 3,
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.brandTurquoise,
+    letterSpacing: 2.5,
     marginBottom: 6,
+    textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 34,
+    fontSize: 42,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
-  titleDesktop: {
-    fontSize: 48,
+  titleMobile: {
+    fontSize: 30,
   },
   subtitle: {
     fontSize: 15,
     color: COLORS.textMuted,
     textAlign: 'center',
-    maxWidth: 600,
-    lineHeight: 22,
+    maxWidth: 620,
+    lineHeight: 23,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-
-  // Content Grid
   contentGrid: {
     flexDirection: 'row',
-    gap: 28,
+    gap: 32,
   },
   contentGridMobile: {
     flexDirection: 'column',
-  },
-  mainColumn: {
-    flex: 1.5,
     gap: 24,
   },
-  mainColumnMobile: {
-    width: '100%',
+  mainColumn: {
+    flex: 1.25,
+    gap: 20,
   },
   sideColumn: {
     flex: 1,
     gap: 20,
   },
-  sideColumnMobile: {
+  columnFullWidth: {
     width: '100%',
   },
-
-  // Map Card
   mapCard: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: SPACING.lg,
     ...SHADOWS.card,
   },
   cardTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: SPACING.md,
   },
   mapContainer: {
-    width: '100%',
-    height: 400,
-    borderRadius: BORDER_RADIUS.lg,
+    height: 320,
+    borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
     marginBottom: SPACING.md,
-  },
-  mapContainerMobile: {
-    height: 280,
   },
   mapFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    padding: SPACING.xl,
+    padding: SPACING.lg,
   },
   mapFallbackText: {
-    fontSize: 16,
     color: COLORS.cream,
-    fontWeight: '600',
-    marginTop: SPACING.md,
-    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 8,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   mapFallbackSub: {
-    fontSize: 13,
     color: COLORS.textMuted,
-    marginTop: 4,
+    fontSize: 12.5,
+    marginTop: 2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   mapAccessibleText: {
-    fontSize: 12,
-    color: COLORS.textSubtle,
-    lineHeight: 17,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 19,
     marginBottom: SPACING.md,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   mapActionsRow: {
     flexDirection: 'row',
@@ -324,180 +323,213 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   mapBtnPrimary: {
-    backgroundColor: COLORS.copper,
+    flex: 1,
+    minWidth: 150,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
+    justifyContent: 'center',
+    backgroundColor: COLORS.copper,
     paddingVertical: 11,
     borderRadius: BORDER_RADIUS.md,
   },
   mapBtnPrimaryText: {
-    color: COLORS.background,
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontSize: 13.5,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   mapBtnSecondary: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    flex: 1,
+    minWidth: 150,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     paddingVertical: 11,
     borderRadius: BORDER_RADIUS.md,
   },
   mapBtnSecondaryText: {
     color: COLORS.cream,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-
-  // Info Card
-  infoCard: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+  storefrontCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: SPACING.md,
+    ...SHADOWS.card,
   },
   storefrontBox: {
-    borderRadius: BORDER_RADIUS.lg,
+    height: 220,
+    borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    marginBottom: SPACING.lg,
-    backgroundColor: COLORS.surface,
+    position: 'relative',
+    marginBottom: 8,
   },
   storefrontImage: {
     width: '100%',
-    height: 180,
+    height: '100%',
+  },
+  storefrontOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(18, 15, 14, 0.20)',
+  },
+  storefrontBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(18, 15, 14, 0.85)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.xs,
+  },
+  storefrontBadgeText: {
+    color: COLORS.cream,
+    fontSize: 11.5,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   storefrontCaption: {
-    padding: SPACING.sm,
-    fontSize: 12,
-    color: COLORS.textSubtle,
+    fontSize: 12.5,
+    color: COLORS.textMuted,
+    lineHeight: 18,
     fontStyle: 'italic',
-    lineHeight: 16,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  infoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+    gap: 14,
+    ...SHADOWS.card,
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
+    alignItems: 'flex-start',
+    gap: 12,
   },
   infoIcon: {
-    marginRight: 14,
     marginTop: 2,
+    flexShrink: 0,
   },
   infoLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.brandTurquoise,
+    fontSize: 11,
+    color: COLORS.textSubtle,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: COLORS.cream,
     lineHeight: 20,
+    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   plusCodeText: {
-    fontSize: 12,
-    color: COLORS.gold,
-    marginTop: 3,
-    fontWeight: '600',
+    color: COLORS.copperLight,
+    fontSize: 11.5,
+    marginTop: 2,
+    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-
-  // Actions Card
   actionsCard: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: SPACING.lg,
+    gap: 10,
     ...SHADOWS.card,
   },
   actionPrimary: {
-    backgroundColor: COLORS.copper,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    backgroundColor: COLORS.brandHeart,
+    paddingVertical: 12,
     borderRadius: BORDER_RADIUS.md,
-    marginBottom: 12,
   },
   actionPrimaryText: {
-    color: COLORS.background,
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   actionWhatsApp: {
-    backgroundColor: '#16A34A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    backgroundColor: '#15803D',
+    paddingVertical: 12,
     borderRadius: BORDER_RADIUS.md,
-    marginBottom: 12,
   },
   actionWhatsAppText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   actionUtility: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 11,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
-    marginBottom: 8,
   },
   actionUtilityText: {
     color: COLORS.cream,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-
-  // Specs Card
   specsCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: SPACING.lg,
+    gap: 10,
   },
   specsTitle: {
-    fontSize: 16,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 17,
     fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: SPACING.md,
+    marginBottom: 4,
   },
   specRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
   },
   specLabel: {
-    fontSize: 13,
     color: COLORS.textMuted,
-    flex: 1,
+    fontSize: 12.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   specValue: {
+    color: COLORS.cream,
     fontSize: 13,
-    color: COLORS.gold,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'right',
-  },
-  specDisclaimer: {
-    fontSize: 11,
-    color: COLORS.textSubtle,
-    fontStyle: 'italic',
-    marginBottom: 10,
-    marginTop: -4,
-    textAlign: 'right',
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

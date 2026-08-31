@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, useWindowDimensions, Platform } from 'react-native';
 import { Star, ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 
 export default function ReviewsPage() {
@@ -9,8 +9,8 @@ export default function ReviewsPage() {
   const { settings, verifiedReviews } = useSettings();
 
   const isMobile = width < 600;
-  const isTablet = width >= 600 && width < 900;
-  const isDesktop = width >= 900;
+  const isTablet = width >= 600 && width < 920;
+  const isDesktop = width >= 920;
 
   return (
     <View style={styles.container}>
@@ -20,7 +20,7 @@ export default function ReviewsPage() {
           <Text style={styles.preTitle}>VERIFIED PUBLIC RATINGS</Text>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>Guest Reviews & Ratings</Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Authentic dining reviews, ratings, and feedback directly linked to official Google, Justdial, and Magicpin listings.
+            Authentic dining reviews, ratings, and guest feedback directly linked to official Google, Justdial, and Magicpin listings.
           </Text>
         </View>
 
@@ -30,7 +30,7 @@ export default function ReviewsPage() {
           <View style={[styles.platformCard, isMobile && styles.cardFullWidth, isTablet && styles.cardHalfWidth]}>
             <View style={styles.platformHeader}>
               <View style={styles.platformBadge}>
-                <ShieldCheck size={14} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+                <ShieldCheck size={15} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
                 <Text style={styles.platformBadgeText}>Google Maps</Text>
               </View>
               <Text style={styles.verifiedTag}>Verified Profile</Text>
@@ -54,6 +54,7 @@ export default function ReviewsPage() {
               style={styles.platformActionBtn} 
               onPress={() => Linking.openURL(settings.googleReviewsUrl)}
               accessibilityRole="link"
+              activeOpacity={0.85}
             >
               <Text style={styles.platformActionText}>View on Google Maps</Text>
               <ExternalLink size={13} color="#FFFFFF" style={{ marginLeft: 6 }} />
@@ -65,7 +66,7 @@ export default function ReviewsPage() {
             <View style={[styles.platformCard, isMobile && styles.cardFullWidth, isTablet && styles.cardHalfWidth]}>
               <View style={styles.platformHeader}>
                 <View style={styles.platformBadge}>
-                  <ShieldCheck size={14} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+                  <ShieldCheck size={15} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
                   <Text style={styles.platformBadgeText}>Justdial</Text>
                 </View>
                 <Text style={styles.verifiedTag}>Verified Listing</Text>
@@ -89,6 +90,7 @@ export default function ReviewsPage() {
                 style={styles.platformActionBtn} 
                 onPress={() => Linking.openURL(settings.justdialUrl!)}
                 accessibilityRole="link"
+                activeOpacity={0.85}
               >
                 <Text style={styles.platformActionText}>View on Justdial</Text>
                 <ExternalLink size={13} color="#FFFFFF" style={{ marginLeft: 6 }} />
@@ -101,7 +103,7 @@ export default function ReviewsPage() {
             <View style={[styles.platformCard, isMobile && styles.cardFullWidth, isTablet && styles.cardHalfWidth]}>
               <View style={styles.platformHeader}>
                 <View style={styles.platformBadge}>
-                  <ShieldCheck size={14} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+                  <ShieldCheck size={15} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
                   <Text style={styles.platformBadgeText}>Magicpin</Text>
                 </View>
                 <Text style={styles.verifiedTag}>Verified Listing</Text>
@@ -125,6 +127,7 @@ export default function ReviewsPage() {
                 style={styles.platformActionBtn} 
                 onPress={() => Linking.openURL(settings.magicpinUrl!)}
                 accessibilityRole="link"
+                activeOpacity={0.85}
               >
                 <Text style={styles.platformActionText}>View on Magicpin</Text>
                 <ExternalLink size={13} color="#FFFFFF" style={{ marginLeft: 6 }} />
@@ -147,7 +150,8 @@ export default function ReviewsPage() {
                 style={[
                   styles.reviewItemCard,
                   isMobile && styles.cardFullWidth,
-                  isTablet && styles.cardHalfWidth
+                  isTablet && styles.cardHalfWidth,
+                  isDesktop && styles.cardThirdWidth
                 ]}
                 onPress={() => Linking.openURL(rev.externalReviewUrl)}
                 activeOpacity={0.85}
@@ -157,7 +161,7 @@ export default function ReviewsPage() {
                     <Text style={styles.sourceTag}>{rev.source}</Text>
                     <View style={styles.starCluster}>
                       {Array.from({ length: rev.rating }).map((_, i) => (
-                        <Star key={i} size={12} color={COLORS.gold} fill={COLORS.gold} style={{ marginLeft: 1 }} />
+                        <Star key={i} size={13} color={COLORS.gold} fill={COLORS.gold} style={{ marginLeft: 2 }} />
                       ))}
                     </View>
                   </View>
@@ -170,7 +174,7 @@ export default function ReviewsPage() {
                   <View style={styles.aspectsRow}>
                     {rev.aspects.map((aspect) => (
                       <View key={aspect} style={styles.aspectBadge}>
-                        <CheckCircle2 size={10} color={COLORS.brandTurquoise} style={{ marginRight: 3 }} />
+                        <CheckCircle2 size={10} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
                         <Text style={styles.aspectText}>{aspect}</Text>
                       </View>
                     ))}
@@ -181,7 +185,7 @@ export default function ReviewsPage() {
                   <Text style={styles.authorName}>{rev.reviewerName}</Text>
                   <View style={styles.linkOut}>
                     <Text style={styles.linkOutText}>Source</Text>
-                    <ExternalLink size={11} color={COLORS.brandTurquoise} />
+                    <ExternalLink size={12} color={COLORS.brandTurquoise} style={{ marginLeft: 4 }} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -203,59 +207,68 @@ export default function ReviewsPage() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     backgroundColor: COLORS.background,
+    minHeight: '100%',
+    paddingBottom: SPACING.giant,
   },
   innerContainer: {
-    maxWidth: 1200,
+    maxWidth: LAYOUT.maxContainerWidth,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xl,
+    marginHorizontal: 'auto',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xxl,
   },
   headerBox: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    textAlign: 'center',
+    marginBottom: SPACING.xxl,
   },
   preTitle: {
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: COLORS.brandTurquoise,
-    letterSpacing: 2,
-    marginBottom: 4,
+    letterSpacing: 2.5,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 32,
+    fontSize: 42,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   titleMobile: {
-    fontSize: 24,
+    fontSize: 28,
   },
   subtitle: {
-    fontSize: 13.5,
+    fontSize: 15,
     color: COLORS.textMuted,
     textAlign: 'center',
     maxWidth: 620,
-    lineHeight: 19,
+    lineHeight: 23,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   subtitleMobile: {
-    fontSize: 12.5,
+    fontSize: 13.5,
+    lineHeight: 20,
   },
   platformsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: SPACING.xxl,
+    gap: 20,
+    marginBottom: SPACING.xxxl,
   },
   platformCard: {
-    width: '31.8%',
-    backgroundColor: COLORS.surfaceElevated,
+    flex: 1,
+    minWidth: 260,
+    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'space-between',
@@ -265,7 +278,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardHalfWidth: {
-    width: '48.5%',
+    width: '48%',
+  },
+  cardThirdWidth: {
+    width: '31.8%',
   },
   platformHeader: {
     flexDirection: 'row',
@@ -276,182 +292,188 @@ const styles = StyleSheet.create({
   platformBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
   },
   platformBadgeText: {
     color: COLORS.cream,
-    fontSize: 11.5,
+    fontSize: 14,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   verifiedTag: {
-    color: COLORS.brandTurquoise,
+    color: COLORS.copperLight,
     fontSize: 11,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   ratingNumberRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: SPACING.xs,
+    gap: 12,
+    marginBottom: 8,
   },
   ratingBigText: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
     fontSize: 38,
     fontWeight: '900',
-    color: COLORS.cream,
+    color: COLORS.gold,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   starsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   reviewCountLabel: {
-    color: COLORS.creamMuted,
-    fontSize: 12.5,
-    marginBottom: SPACING.md,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.lg,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   platformActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.brandGreen,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
   },
   platformActionText: {
-    color: '#FFFFFF',
-    fontSize: 12.5,
-    fontWeight: '700',
+    color: COLORS.cream,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   verifiedReviewsSection: {
-    marginTop: SPACING.md,
+    marginBottom: SPACING.xxxl,
   },
   sectionTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: COLORS.cream,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   sectionTitleMobile: {
-    fontSize: 20,
+    fontSize: 22,
   },
   sectionDesc: {
+    fontSize: 14,
     color: COLORS.textMuted,
-    fontSize: 12.5,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 20,
   },
   reviewItemCard: {
-    width: '48.8%',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
+    padding: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'space-between',
+    ...SHADOWS.card,
   },
   reviewCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: 12,
   },
   reviewBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   sourceTag: {
     color: COLORS.brandTurquoise,
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
-    textTransform: 'uppercase',
+    backgroundColor: COLORS.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.xs,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   starCluster: {
     flexDirection: 'row',
   },
   dateTag: {
     color: COLORS.textSubtle,
-    fontSize: 10.5,
+    fontSize: 11.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   quoteText: {
+    fontSize: 14,
     color: COLORS.creamMuted,
-    fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 22,
     fontStyle: 'italic',
-    marginBottom: SPACING.md,
+    marginBottom: 14,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   aspectsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: SPACING.md,
+    marginBottom: 14,
   },
   aspectBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceElevated,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.xs,
   },
   aspectText: {
-    color: COLORS.cream,
-    fontSize: 10.5,
+    color: COLORS.creamMuted,
+    fontSize: 11,
     fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewCardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: SPACING.xs,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
   authorName: {
     color: COLORS.cream,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   linkOut: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
   },
   linkOutText: {
     color: COLORS.brandTurquoise,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   disclaimerContainer: {
-    marginTop: SPACING.xxl,
-    padding: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: SPACING.xl,
   },
   disclaimerHeading: {
-    color: COLORS.cream,
-    fontSize: 12.5,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 3,
+    color: COLORS.cream,
+    marginBottom: 6,
   },
   disclaimerBody: {
-    color: COLORS.textSubtle,
-    fontSize: 11.5,
-    lineHeight: 16,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    lineHeight: 20,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, useWindowDimensions } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Home, UtensilsCrossed, ShoppingBag, Calendar, MessageSquare, Phone, MapPin } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '../../theme';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme';
 import { useCart } from '../../context/CartContext';
 import { useSettings } from '../../context/SettingsContext';
 import { analytics } from '../../services/analytics';
@@ -14,10 +14,12 @@ export const MobileBottomNav: React.FC = () => {
   const { itemCount, openCart } = useCart();
   const { settings } = useSettings();
 
-  // Hide bottom nav on desktop screens
+  // Hide bottom nav on desktop/tablet screens >= 768px
   if (width >= 768) {
     return null;
   }
+
+  const isSmallMobile = width < 360;
 
   const navItems = [
     { label: 'Home', href: '/', icon: Home },
@@ -48,32 +50,32 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <React.Fragment>
       {/* Floating Action Buttons */}
-      <View style={styles.floatingContainer}>
+      <View style={[styles.floatingContainer, isSmallMobile && styles.floatingContainerSmall]}>
         {/* Call Button */}
         <TouchableOpacity
-          style={styles.floatingCallButton}
+          style={[styles.floatingCallButton, isSmallMobile && styles.floatingBtnSmall]}
           onPress={handleCall}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Call restaurant directly"
         >
-          <Phone size={18} color="#FFFFFF" />
+          <Phone size={isSmallMobile ? 15 : 17} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* WhatsApp Button */}
         <TouchableOpacity
-          style={styles.floatingWaButton}
+          style={[styles.floatingWaButton, isSmallMobile && styles.floatingBtnSmall]}
           onPress={handleWhatsApp}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Chat on WhatsApp"
         >
-          <MessageSquare size={18} color="#FFFFFF" />
+          <MessageSquare size={isSmallMobile ? 15 : 17} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNavContainer}>
+      <View style={[styles.bottomNavContainer, isSmallMobile && styles.bottomNavContainerSmall]}>
         {navItems.map((item, index) => {
           const IconComponent = item.icon;
           const active = isActive(item.href);
@@ -81,7 +83,7 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <TouchableOpacity
               key={index}
-              style={styles.tabItem}
+              style={[styles.tabItem, isSmallMobile && styles.tabItemSmall]}
               onPress={() => {
                 if (item.action) {
                   item.action();
@@ -95,16 +97,23 @@ export const MobileBottomNav: React.FC = () => {
             >
               <View style={styles.iconContainer}>
                 <IconComponent
-                  size={19}
+                  size={isSmallMobile ? 17 : 19}
                   color={active ? COLORS.brandTurquoise : COLORS.textSubtle}
                 />
                 {item.badge !== undefined && item.badge > 0 && (
-                  <View style={styles.badge}>
+                  <View style={[styles.badge, isSmallMobile && styles.badgeSmall]}>
                     <Text style={styles.badgeText}>{item.badge}</Text>
                   </View>
                 )}
               </View>
-              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+              <Text 
+                style={[
+                  styles.tabLabel, 
+                  isSmallMobile && styles.tabLabelSmall,
+                  active && styles.tabLabelActive
+                ]}
+                numberOfLines={1}
+              >
                 {item.label}
               </Text>
             </TouchableOpacity>
@@ -118,65 +127,80 @@ export const MobileBottomNav: React.FC = () => {
 const styles = StyleSheet.create({
   floatingContainer: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-    bottom: 68,
+    bottom: 72,
     right: 14,
     flexDirection: 'column',
     gap: 10,
-    zIndex: 999,
+    zIndex: 995,
+  },
+  floatingContainerSmall: {
+    bottom: 66,
+    right: 10,
+    gap: 8,
   },
   floatingCallButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#2563EB',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1E40AF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    ...SHADOWS.cardHover,
   },
   floatingWaButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#16A34A',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#15803D',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    ...SHADOWS.cardHover,
+  },
+  floatingBtnSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
   bottomNavContainer: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(26, 22, 21, 0.98)',
+    backgroundColor: 'rgba(22, 18, 17, 0.98)',
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingVertical: 6,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-    minHeight: 56,
-    zIndex: 998,
+    paddingVertical: 7,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 9,
+    minHeight: 60,
+    zIndex: 994,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  bottomNavContainerSmall: {
+    minHeight: 54,
+    paddingVertical: 5,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 6,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
     paddingVertical: 2,
-    minHeight: 42,
+    minHeight: 44,
+  },
+  tabItemSmall: {
+    minHeight: 40,
+    paddingVertical: 1,
   },
   iconContainer: {
     position: 'relative',
@@ -189,22 +213,35 @@ const styles = StyleSheet.create({
     top: -4,
     right: -10,
     backgroundColor: COLORS.brandHeart,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
+  badgeSmall: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    top: -3,
+    right: -8,
+  },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '800',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     color: COLORS.textSubtle,
     fontWeight: '500',
+    marginTop: 3,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  tabLabelSmall: {
+    fontSize: 9.5,
     marginTop: 2,
   },
   tabLabelActive: {

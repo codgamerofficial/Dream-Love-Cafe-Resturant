@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import { Link } from 'expo-router';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
-import { COLORS } from '../../theme';
+import { COLORS, TYPOGRAPHY } from '../../theme';
 
 interface BrandLogoProps {
   variant?: 'primary' | 'compact' | 'icon' | 'monochrome';
@@ -20,7 +20,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   style,
 }) => {
   // Scaling factors
-  const scale = size === 'sm' ? 0.75 : size === 'lg' ? 1.25 : size === 'xl' ? 1.6 : 1;
+  const scale = size === 'sm' ? 0.78 : size === 'lg' ? 1.25 : size === 'xl' ? 1.55 : 1;
   const isLight = theme === 'light';
 
   const textColorDream = isLight ? '#065F46' : COLORS.brandTurquoise;
@@ -34,7 +34,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   const content = (
     <View style={[styles.container, style]}>
-      {/* Real Storefront Heart & Pulse SVG Icon */}
+      {/* Authentic Storefront Heart & Pulse SVG Icon */}
       <View style={styles.iconContainer}>
         <Svg width={iconWidth} height={iconHeight} viewBox="0 0 48 40" fill="none">
           <Defs>
@@ -91,7 +91,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             </Text>
             {/* Real Storefront 3-Heart Accent */}
             <View style={styles.heartTrio}>
-              <Text style={{ color: '#E11D48', fontSize: 8 * scale }}>♥♥♥</Text>
+              <Text style={{ color: COLORS.brandHeart, fontSize: 9 * scale, letterSpacing: 1 }}>♥♥♥</Text>
             </View>
           </View>
 
@@ -100,7 +100,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               <Text style={[styles.brandSubtitle, { color: textSubtitle, fontSize: 9 * scale }]}>
                 CAFÉ & RESTAURANT
               </Text>
-              <View style={[styles.subtitleBadge, { backgroundColor: isLight ? '#E0E7FF' : '#0D7C6633' }]}>
+              <View style={[styles.subtitleBadge, { backgroundColor: isLight ? '#E0E7FF' : COLORS.brandGreenMuted }]}>
                 <Text style={[styles.subtitleBadgeText, { color: iconGreen, fontSize: 7.5 * scale }]}>
                   CONTAI
                 </Text>
@@ -145,17 +145,17 @@ const styles = StyleSheet.create({
   },
   heartTrio: {
     marginLeft: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   brandDream: {
     fontWeight: '800',
     letterSpacing: 1.5,
-    fontFamily: 'system-ui, -apple-system, Roboto, sans-serif',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   brandLove: {
     fontWeight: '900',
     letterSpacing: 1.5,
-    fontFamily: 'system-ui, -apple-system, Roboto, sans-serif',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   subtitleRow: {
     flexDirection: 'row',
@@ -167,14 +167,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 2,
     textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   subtitleBadge: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
     borderRadius: 4,
   },
   subtitleBadgeText: {
     fontWeight: '700',
     letterSpacing: 1,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,8 +10,8 @@ import {
   Platform 
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Search, Sparkles, Utensils, X, Check } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
+import { Search, Sparkles, Utensils, X, Check, Filter } from 'lucide-react-native';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 import { MenuCard } from '../../src/components/menu/MenuCard';
 import { analytics } from '../../src/services/analytics';
@@ -32,7 +32,7 @@ export default function MenuPage() {
   const [onlyFeatured, setOnlyFeatured] = useState(false);
 
   // Sync category if URL parameter changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (urlCategory) {
       setSelectedCategory(urlCategory);
       analytics.track('menu_view', { category: urlCategory });
@@ -47,9 +47,10 @@ export default function MenuPage() {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = item.name.toLowerCase().includes(query);
+        const matchesCanonical = item.canonical_name?.toLowerCase().includes(query) || false;
         const matchesCategory = item.category?.toLowerCase().includes(query) || false;
         const matchesDesc = item.description?.toLowerCase().includes(query) || false;
-        if (!matchesName && !matchesCategory && !matchesDesc) return false;
+        if (!matchesName && !matchesCanonical && !matchesCategory && !matchesDesc) return false;
       }
 
       // 2. Category Filter
@@ -83,15 +84,15 @@ export default function MenuPage() {
           <Text style={styles.preTitle}>DREAM LOVE CAFÉ & RESTAURANT</Text>
           <Text style={[styles.pageTitle, isMobile && styles.pageTitleMobile]}>Explore the Menu</Text>
           <Text style={[styles.pageSubtitle, isMobile && styles.pageSubtitleMobile]}>
-            From tandoor-fired favourites to biryani, Chinese classics, refreshing mocktails and café beverages.
+            From tandoor favourites and biryani to Chinese dishes, mocktails, shakes, and café beverages.
           </Text>
 
           {/* Search Bar */}
           <View style={styles.searchBarContainer}>
-            <Search size={17} color={COLORS.copperLight} style={styles.searchIcon} />
+            <Search size={18} color={COLORS.copperLight} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search dishes..."
+              placeholder="Search dishes, drinks, biryani..."
               placeholderTextColor={COLORS.textSubtle}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -99,7 +100,7 @@ export default function MenuPage() {
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-                <X size={15} color={COLORS.textMuted} />
+                <X size={16} color={COLORS.textMuted} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -210,10 +211,10 @@ export default function MenuPage() {
         ) : (
           /* Empty Search / Filter State */
           <View style={styles.emptyState}>
-            <Utensils size={40} color={COLORS.textSubtle} style={{ marginBottom: 14 }} />
+            <Utensils size={44} color={COLORS.textSubtle} style={{ marginBottom: 14 }} />
             <Text style={styles.emptyTitle}>No dishes found</Text>
             <Text style={styles.emptySubtitle}>
-              Try another dish name or browse by category.
+              Try searching with another keyword or explore our categories.
             </Text>
             <TouchableOpacity 
               style={styles.resetBtn} 
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: COLORS.background,
     minHeight: '100%',
-    paddingBottom: SPACING.xxxl,
+    paddingBottom: SPACING.giant,
   },
   pageHeader: {
     backgroundColor: COLORS.surfaceMuted,
@@ -245,28 +246,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
   },
   headerInner: {
-    maxWidth: 820,
+    maxWidth: 780,
     width: '100%',
     marginHorizontal: 'auto',
     alignItems: 'center',
     textAlign: 'center',
   },
   preTitle: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: COLORS.copper,
-    letterSpacing: 2,
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.brandTurquoise,
+    letterSpacing: 2.5,
     marginBottom: 6,
     textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   pageTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 40,
+    fontSize: 42,
     fontWeight: '800',
     color: COLORS.cream,
-    letterSpacing: -0.5,
-    marginBottom: 10,
     textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   pageTitleMobile: {
     fontSize: 30,
@@ -274,26 +276,28 @@ const styles = StyleSheet.create({
   pageSubtitle: {
     fontSize: 15,
     color: COLORS.textMuted,
-    lineHeight: 23,
     textAlign: 'center',
+    lineHeight: 23,
     marginBottom: SPACING.xl,
     maxWidth: 620,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   pageSubtitleMobile: {
     fontSize: 13.5,
     lineHeight: 20,
+    marginBottom: SPACING.lg,
   },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    borderRadius: BORDER_RADIUS.md,
     paddingHorizontal: 14,
+    height: 50,
     width: '100%',
     maxWidth: 540,
-    height: 48,
     ...SHADOWS.card,
   },
   searchIcon: {
@@ -302,65 +306,71 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: COLORS.cream,
-    fontSize: 14.5,
+    fontSize: 15,
     height: '100%',
-    outlineStyle: 'none' as any,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   clearSearchBtn: {
     padding: 6,
   },
 
-  // ── Category Tabs ──
+  // Sticky Category Navigation Bar
   categoryBarWrapper: {
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    paddingVertical: 10,
+    width: '100%',
     position: Platform.OS === 'web' ? ('sticky' as any) : 'relative',
-    top: 64, // below sticky header
-    zIndex: 10,
+    top: Platform.OS === 'web' ? 68 : 0,
+    zIndex: 90,
   },
   categoryBarContent: {
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 10,
     gap: 8,
+    alignItems: 'center',
+    maxWidth: LAYOUT.maxContainerWidth,
+    marginHorizontal: 'auto',
+    width: '100%',
   },
   categoryTab: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.surfaceMuted,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   categoryTabActive: {
-    backgroundColor: COLORS.brandTurquoise + '18',
+    backgroundColor: COLORS.brandTurquoise,
     borderColor: COLORS.brandTurquoise,
   },
   categoryTabText: {
     color: COLORS.creamMuted,
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   categoryTabTextActive: {
-    color: COLORS.brandTurquoise,
-    fontWeight: '700',
+    color: COLORS.backgroundDeep,
+    fontWeight: '800',
   },
 
-  // ── Dietary Filters ──
+  // Dietary Filters Strip
   filterControlBar: {
     backgroundColor: COLORS.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
     paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
   },
   filterInner: {
-    maxWidth: 1240,
+    maxWidth: LAYOUT.maxContainerWidth,
     width: '100%',
     marginHorizontal: 'auto',
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
   },
@@ -373,52 +383,54 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.sm,
     backgroundColor: COLORS.surface,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
   filterChipActive: {
     backgroundColor: COLORS.surfaceElevated,
-    borderColor: COLORS.creamMuted,
+    borderColor: COLORS.cream,
   },
   filterChipActiveVeg: {
-    backgroundColor: COLORS.vegGreen + '20',
+    backgroundColor: COLORS.vegGreenBg,
     borderColor: COLORS.vegGreen,
   },
   filterChipActiveNonVeg: {
-    backgroundColor: COLORS.nonVegRed + '20',
+    backgroundColor: COLORS.nonVegRedBg,
     borderColor: COLORS.nonVegRed,
   },
   filterChipActiveSpecial: {
-    backgroundColor: COLORS.brandHeart + '25',
+    backgroundColor: COLORS.brandHeart,
     borderColor: COLORS.brandHeart,
   },
   filterDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: 6,
   },
   filterChipText: {
     color: COLORS.textMuted,
     fontSize: 12.5,
     fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   filterChipTextActive: {
     color: COLORS.cream,
     fontWeight: '700',
   },
   resultsCountText: {
-    fontSize: 12.5,
-    color: COLORS.textSubtle,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── Menu Grid ──
+  // Menu Grid
   menuGridContainer: {
-    maxWidth: 1240,
+    maxWidth: LAYOUT.maxContainerWidth,
     width: '100%',
     marginHorizontal: 'auto',
     paddingHorizontal: SPACING.lg,
@@ -430,34 +442,31 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   gridRowMobile: {
-    flexDirection: 'column',
     gap: 16,
   },
   cardWrapper: {
-    flex: 1,
+    width: '31.8%',
   },
   cardWrapperDesktop: {
-    flexBasis: 'calc(33.333% - 14px)' as any,
-    minWidth: 280,
+    width: '31.8%',
   },
   cardWrapperTablet: {
-    flexBasis: 'calc(50% - 10px)' as any,
-    minWidth: 260,
+    width: '48%',
   },
   cardWrapperMobile: {
     width: '100%',
   },
 
-  // ── Empty State ──
+  // Empty State
   emptyState: {
-    paddingVertical: SPACING.xxxl,
     alignItems: 'center',
     justifyContent: 'center',
-    textAlign: 'center',
+    paddingVertical: SPACING.xxxl,
+    paddingHorizontal: SPACING.lg,
   },
   emptyTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 6,
@@ -465,17 +474,23 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     color: COLORS.textMuted,
+    textAlign: 'center',
+    maxWidth: 420,
     marginBottom: SPACING.lg,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   resetBtn: {
-    backgroundColor: COLORS.brandHeart,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: BORDER_RADIUS.md,
   },
   resetBtnText: {
-    color: '#FFFFFF',
+    color: COLORS.brandTurquoise,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

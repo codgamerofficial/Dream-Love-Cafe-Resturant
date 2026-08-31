@@ -12,7 +12,7 @@ import {
   Platform,
   useWindowDimensions 
 } from 'react-native';
-import { X, Trash2, Plus, Minus, MessageSquare, ShoppingBag, CheckCircle2 } from 'lucide-react-native';
+import { X, Trash2, Plus, Minus, MessageSquare, ShoppingBag, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react-native';
 import { useCart } from '../../context/CartContext';
 import { useSettings } from '../../context/SettingsContext';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme';
@@ -25,6 +25,8 @@ export const CartDrawer: React.FC = () => {
   const { width } = useWindowDimensions();
   const { items, subtotal, itemCount, isCartOpen, closeCart, incrementQuantity, decrementQuantity, removeItem, clearCart } = useCart();
   const { settings } = useSettings();
+
+  const isDesktop = width >= 768;
 
   const [orderType, setOrderType] = useState<OrderType>('dine-in');
   const [customerName, setCustomerName] = useState('');
@@ -51,7 +53,7 @@ export const CartDrawer: React.FC = () => {
     }
 
     if (orderType === 'delivery' && !deliveryAddress.trim()) {
-      setErrorMessage('Please enter delivery address');
+      setErrorMessage('Please enter your delivery address');
       return;
     }
 
@@ -75,7 +77,7 @@ export const CartDrawer: React.FC = () => {
       settings.whatsapp
     );
 
-    // Optionally record order in Supabase Database (Section 35)
+    // Record order in Supabase Database if configured
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: orderData } = await supabase
@@ -110,7 +112,7 @@ export const CartDrawer: React.FC = () => {
 
     // Open WhatsApp URL
     Linking.openURL(link).catch(() => {
-      setErrorMessage('Could not open WhatsApp. Make sure WhatsApp is installed.');
+      setErrorMessage('Could not open WhatsApp. Please ensure WhatsApp is installed or available.');
     });
 
     setIsOrderSubmitted(true);
@@ -125,38 +127,43 @@ export const CartDrawer: React.FC = () => {
   return (
     <Modal
       visible={isCartOpen}
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       onRequestClose={closeCart}
     >
       <View style={styles.backdrop}>
         <TouchableOpacity style={styles.backdropTouchable} onPress={closeCart} activeOpacity={1} />
         
-        <View style={[styles.drawerContainer, width >= 768 && styles.drawerContainerDesktop]}>
+        <View style={[styles.drawerContainer, isDesktop ? styles.drawerContainerDesktop : styles.drawerContainerMobile]}>
           {/* Header */}
           <View style={styles.drawerHeader}>
             <View style={styles.headerTitleRow}>
-              <ShoppingBag size={22} color={COLORS.gold} style={{ marginRight: 8 }} />
+              <ShoppingBag size={20} color={COLORS.gold} style={{ marginRight: 8 }} />
               <Text style={styles.headerTitle}>Your Order</Text>
               {itemCount > 0 && (
                 <View style={styles.headerCountBadge}>
-                  <Text style={styles.headerCountText}>{itemCount} items</Text>
+                  <Text style={styles.headerCountText}>{itemCount} {itemCount === 1 ? 'item' : 'items'}</Text>
                 </View>
               )}
             </View>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={closeCart}>
-              <X size={22} color={COLORS.cream} />
+            <TouchableOpacity 
+              style={styles.closeBtn} 
+              onPress={closeCart}
+              accessibilityRole="button"
+              accessibilityLabel="Close cart"
+            >
+              <X size={20} color={COLORS.cream} />
             </TouchableOpacity>
           </View>
 
           {/* Content Body */}
           {isOrderSubmitted ? (
             <View style={styles.successContainer}>
-              <CheckCircle2 size={64} color={COLORS.copper} style={{ marginBottom: 16 }} />
+              <CheckCircle2 size={56} color={COLORS.copper} style={{ marginBottom: 16 }} />
               <Text style={styles.successTitle}>Order Sent to WhatsApp!</Text>
               <Text style={styles.successDescription}>
-                Thank you, {customerName}! We have generated your order message and launched WhatsApp to confirm availability.
+                Thank you, {customerName}! We have created your order message and launched WhatsApp to confirm preparation time with our kitchen.
               </Text>
               <TouchableOpacity style={styles.primaryBtn} onPress={handleResetOrder}>
                 <Text style={styles.primaryBtnText}>Done</Text>
@@ -164,162 +171,181 @@ export const CartDrawer: React.FC = () => {
             </View>
           ) : items.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <ShoppingBag size={48} color={COLORS.textSubtle} style={{ marginBottom: 12 }} />
+              <ShoppingBag size={48} color={COLORS.textSubtle} style={{ marginBottom: 14 }} />
               <Text style={styles.emptyTitle}>Your cart is empty</Text>
               <Text style={styles.emptySub}>Explore our delicious menu items and add them to your order.</Text>
             </View>
           ) : (
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-              {/* Item List */}
-              <View style={styles.itemsSection}>
-                {items.map((item) => (
-                  <View key={item.menuItem.id} style={styles.cartItemRow}>
-                    <Image
-                      source={{ uri: item.menuItem.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=300&q=80' }}
-                      style={styles.itemImage}
-                    />
+            <React.Fragment>
+              <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                {/* Item List */}
+                <View style={styles.itemsSection}>
+                  {items.map((item) => (
+                    <View key={item.menuItem.id} style={styles.cartItemRow}>
+                      <Image
+                        source={{ uri: item.menuItem.image_url || item.menuItem.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=300&q=80' }}
+                        style={styles.itemImage}
+                      />
 
-                    <View style={styles.itemMeta}>
-                      <Text style={styles.itemName} numberOfLines={1}>
-                        {item.menuItem.name}
-                      </Text>
-                      <Text style={styles.itemPrice}>
-                        {item.menuItem.price ? `₹${item.menuItem.price} each` : item.menuItem.priceRange || 'Ask for price'}
-                      </Text>
-                    </View>
+                      <View style={styles.itemMeta}>
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.menuItem.name}
+                        </Text>
+                        <Text style={styles.itemPrice}>
+                          {item.menuItem.price ? `₹${item.menuItem.price} each` : item.menuItem.priceRange || 'Price on request'}
+                        </Text>
+                      </View>
 
-                    {/* Quantity controls */}
-                    <View style={styles.qtyContainer}>
+                      {/* Quantity controls */}
+                      <View style={styles.qtyContainer}>
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() => decrementQuantity(item.menuItem.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease quantity"
+                        >
+                          <Minus size={12} color={COLORS.cream} />
+                        </TouchableOpacity>
+
+                        <Text style={styles.qtyValue}>{item.quantity}</Text>
+
+                        <TouchableOpacity
+                          style={styles.qtyBtn}
+                          onPress={() => incrementQuantity(item.menuItem.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase quantity"
+                        >
+                          <Plus size={12} color={COLORS.cream} />
+                        </TouchableOpacity>
+                      </View>
+
                       <TouchableOpacity
-                        style={styles.qtyBtn}
-                        onPress={() => decrementQuantity(item.menuItem.id)}
+                        style={styles.deleteBtn}
+                        onPress={() => removeItem(item.menuItem.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${item.menuItem.name}`}
                       >
-                        <Minus size={12} color={COLORS.cream} />
-                      </TouchableOpacity>
-
-                      <Text style={styles.qtyValue}>{item.quantity}</Text>
-
-                      <TouchableOpacity
-                        style={styles.qtyBtn}
-                        onPress={() => incrementQuantity(item.menuItem.id)}
-                      >
-                        <Plus size={12} color={COLORS.cream} />
+                        <Trash2 size={16} color={COLORS.errorLight} />
                       </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={() => removeItem(item.menuItem.id)}
-                    >
-                      <Trash2 size={16} color={COLORS.errorLight} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-
-              {/* Order Type Toggle */}
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Dining Mode</Text>
-                <View style={styles.typeSelectorRow}>
-                  {(['dine-in', 'takeaway', 'delivery'] as OrderType[]).map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[styles.typeOption, orderType === t && styles.typeOptionActive]}
-                      onPress={() => setOrderType(t)}
-                    >
-                      <Text style={[styles.typeOptionText, orderType === t && styles.typeOptionTextActive]}>
-                        {t === 'dine-in' ? 'Dine-in' : t === 'takeaway' ? 'Takeaway' : 'Delivery'}
-                      </Text>
-                    </TouchableOpacity>
                   ))}
                 </View>
-              </View>
 
-              {/* Customer Info Form */}
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Contact & Preferences</Text>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Your Name *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your full name"
-                    placeholderTextColor={COLORS.textSubtle}
-                    value={customerName}
-                    onChangeText={setCustomerName}
-                  />
+                {/* Order Type Toggle */}
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionTitle}>Dining Mode</Text>
+                  <View style={styles.typeSelectorRow}>
+                    {(['dine-in', 'takeaway', 'delivery'] as OrderType[]).map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        style={[styles.typeOption, orderType === t && styles.typeOptionActive]}
+                        onPress={() => setOrderType(t)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.typeOptionText, orderType === t && styles.typeOptionTextActive]}>
+                          {t === 'dine-in' ? 'Dine-In' : t === 'takeaway' ? 'Takeaway' : 'Delivery'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Phone Number *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. +91 98765 43210"
-                    placeholderTextColor={COLORS.textSubtle}
-                    keyboardType="phone-pad"
-                    value={customerPhone}
-                    onChangeText={setCustomerPhone}
-                  />
-                </View>
+                {/* Customer Info Form */}
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionTitle}>Contact & Details</Text>
 
-                {orderType === 'dine-in' && (
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Table Number / Preference (Optional)</Text>
+                    <Text style={styles.label}>Your Full Name *</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="e.g. Table 4 or Corner seating"
+                      placeholder="e.g. Rahul Sen"
                       placeholderTextColor={COLORS.textSubtle}
-                      value={tableNumber}
-                      onChangeText={setTableNumber}
+                      value={customerName}
+                      onChangeText={setCustomerName}
                     />
                   </View>
-                )}
 
-                {orderType === 'delivery' && (
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Delivery Address *</Text>
+                    <Text style={styles.label}>Phone Number (10 digits) *</Text>
                     <TextInput
-                      style={[styles.input, { height: 70 }]}
-                      placeholder="Enter detailed delivery address in Contai"
+                      style={styles.input}
+                      placeholder="e.g. 9876543210"
                       placeholderTextColor={COLORS.textSubtle}
-                      multiline={true}
-                      value={deliveryAddress}
-                      onChangeText={setDeliveryAddress}
+                      value={customerPhone}
+                      onChangeText={setCustomerPhone}
+                      keyboardType="phone-pad"
                     />
                   </View>
-                )}
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Special Request (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Extra spicy, less oil, separate sauce"
-                    placeholderTextColor={COLORS.textSubtle}
-                    value={specialInstructions}
-                    onChangeText={setSpecialInstructions}
-                  />
+                  {orderType === 'dine-in' && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Table Number (if seated)</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g. Table 4"
+                        placeholderTextColor={COLORS.textSubtle}
+                        value={tableNumber}
+                        onChangeText={setTableNumber}
+                      />
+                    </View>
+                  )}
+
+                  {orderType === 'delivery' && (
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Delivery Address in Contai *</Text>
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        placeholder="House / Street / Landmark in Contai"
+                        placeholderTextColor={COLORS.textSubtle}
+                        value={deliveryAddress}
+                        onChangeText={setDeliveryAddress}
+                        multiline
+                        numberOfLines={3}
+                      />
+                    </View>
+                  )}
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Special Instructions (optional)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. Less spicy, extra onions, cold glass"
+                      placeholderTextColor={COLORS.textSubtle}
+                      value={specialInstructions}
+                      onChangeText={setSpecialInstructions}
+                    />
+                  </View>
                 </View>
 
                 {errorMessage ? (
-                  <Text style={styles.errorText}>{errorMessage}</Text>
+                  <View style={styles.errorBox}>
+                    <AlertCircle size={15} color={COLORS.errorLight} style={{ marginRight: 6 }} />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
                 ) : null}
-              </View>
-            </ScrollView>
-          )}
+              </ScrollView>
 
-          {/* Footer Checkout Bar */}
-          {!isOrderSubmitted && items.length > 0 && (
-            <View style={styles.drawerFooter}>
-              <View style={styles.subtotalRow}>
-                <Text style={styles.subtotalLabel}>Estimated Subtotal</Text>
-                <Text style={styles.subtotalValue}>₹{subtotal}</Text>
-              </View>
+              {/* Sticky Checkout Footer */}
+              <View style={styles.drawerFooter}>
+                <View style={styles.subtotalRow}>
+                  <Text style={styles.subtotalLabel}>Estimated Subtotal:</Text>
+                  <Text style={styles.subtotalValue}>₹{subtotal}</Text>
+                </View>
 
-              <TouchableOpacity style={styles.whatsappCheckoutBtn} onPress={handleWhatsAppCheckout}>
-                <MessageSquare size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.whatsappCheckoutText}>Order on WhatsApp</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={styles.checkoutBtn}
+                  onPress={handleWhatsAppCheckout}
+                  activeOpacity={0.85}
+                >
+                  <MessageSquare size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.checkoutBtnText}>Send Order via WhatsApp</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.disclaimerText}>
+                  Your order message will be sent directly to Dream Love's WhatsApp for instant confirmation.
+                </Text>
+              </View>
+            </React.Fragment>
           )}
         </View>
       </View>
@@ -330,38 +356,42 @@ export const CartDrawer: React.FC = () => {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(18, 15, 14, 0.85)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.70)',
     flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   backdropTouchable: {
     flex: 1,
   },
   drawerContainer: {
-    width: '100%',
-    maxWidth: 480,
-    backgroundColor: COLORS.surface,
-    height: '100%',
+    backgroundColor: COLORS.surfaceElevated,
     flexDirection: 'column',
-    shadowColor: '#000',
-    shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 16,
+    justifyContent: 'space-between',
+    ...SHADOWS.cardHover,
   },
   drawerContainerDesktop: {
+    width: 440,
+    height: '100%',
     borderLeftWidth: 1,
     borderLeftColor: COLORS.border,
   },
+  drawerContainerMobile: {
+    width: '100%',
+    height: '92%',
+    alignSelf: 'flex-end',
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
   drawerHeader: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surfaceElevated,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -369,118 +399,119 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: COLORS.cream,
   },
   headerCountBadge: {
-    backgroundColor: COLORS.copper + '30',
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
-    marginLeft: 10,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   headerCountText: {
-    color: COLORS.gold,
-    fontSize: 11,
-    fontWeight: '600',
+    color: COLORS.copperLight,
+    fontSize: 11.5,
+    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   closeBtn: {
-    padding: 6,
-  },
-  emptyContainer: {
-    flex: 1,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.xxl,
-  },
-  emptyTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 20,
-    color: COLORS.cream,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
+    gap: 16,
   },
   itemsSection: {
-    marginBottom: SPACING.md,
+    gap: 10,
   },
   cartItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceElevated,
+    backgroundColor: COLORS.surface,
+    padding: 10,
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.sm,
-    marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
+    gap: 10,
   },
   itemImage: {
     width: 48,
     height: 48,
     borderRadius: BORDER_RADIUS.sm,
-    marginRight: 10,
+    backgroundColor: COLORS.surfaceElevated,
   },
   itemMeta: {
     flex: 1,
   },
   itemName: {
-    fontSize: 14,
-    fontWeight: '600',
     color: COLORS.cream,
+    fontSize: 13.5,
+    fontWeight: '600',
+    marginBottom: 2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   itemPrice: {
+    color: COLORS.copperLight,
     fontSize: 12,
-    color: COLORS.gold,
     fontWeight: '700',
-    marginTop: 2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   qtyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: 2,
-  },
-  qtyBtn: {
-    padding: 6,
-  },
-  qtyValue: {
-    color: COLORS.cream,
-    fontSize: 13,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-  },
-  deleteBtn: {
-    padding: 8,
-    marginLeft: 6,
-  },
-  sectionCard: {
     backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.xs,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+  qtyBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyValue: {
     color: COLORS.cream,
-    marginBottom: SPACING.sm,
+    fontSize: 12,
+    fontWeight: '700',
+    marginHorizontal: 6,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  deleteBtn: {
+    padding: 6,
+  },
+  sectionCard: {
+    backgroundColor: COLORS.surface,
+    padding: 14,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.creamMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   typeSelectorRow: {
     flexDirection: 'row',
@@ -490,113 +521,164 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
   },
   typeOptionActive: {
-    backgroundColor: COLORS.copper + '30',
-    borderColor: COLORS.copper,
+    backgroundColor: COLORS.brandTurquoise + '25',
+    borderColor: COLORS.brandTurquoise,
   },
   typeOptionText: {
-    fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontSize: 12.5,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   typeOptionTextActive: {
-    color: COLORS.gold,
+    color: COLORS.brandTurquoise,
     fontWeight: '700',
   },
   inputGroup: {
-    marginBottom: 12,
+    gap: 4,
   },
   label: {
-    fontSize: 12,
-    color: COLORS.creamMuted,
-    marginBottom: 4,
+    fontSize: 11.5,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   input: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.sm,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     color: COLORS.cream,
-    fontSize: 13,
+    fontSize: 13.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  textArea: {
+    height: 60,
+    textAlignVertical: 'top',
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 83, 80, 0.15)',
+    padding: 10,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.errorLight,
   },
   errorText: {
     color: COLORS.errorLight,
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 12.5,
+    fontWeight: '500',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   drawerFooter: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.surfaceElevated,
+    padding: SPACING.lg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    gap: 12,
   },
   subtotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
   subtotalLabel: {
     fontSize: 14,
     color: COLORS.textMuted,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   subtotalValue: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: COLORS.gold,
+    color: COLORS.copperLight,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-  whatsappCheckoutBtn: {
-    backgroundColor: '#25D366',
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: 14,
+  checkoutBtn: {
     flexDirection: 'row',
+    backgroundColor: '#15803D',
+    paddingVertical: 13,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
+    ...SHADOWS.card,
   },
-  whatsappCheckoutText: {
+  checkoutBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  disclaimerText: {
+    fontSize: 11,
+    color: COLORS.textSubtle,
+    textAlign: 'center',
+    lineHeight: 15,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.xl,
+  },
+  emptyTitle: {
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: 4,
+  },
+  emptySub: {
+    fontSize: 13.5,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 18,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   successContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.xxl,
+    padding: SPACING.xl,
   },
   successTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 8,
     textAlign: 'center',
   },
   successDescription: {
-    fontSize: 14,
-    color: COLORS.textMuted,
+    fontSize: 13.5,
+    color: COLORS.creamMuted,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: SPACING.xl,
+    maxWidth: 320,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   primaryBtn: {
-    backgroundColor: COLORS.copper,
-    paddingHorizontal: 32,
+    backgroundColor: COLORS.brandHeart,
     paddingVertical: 12,
+    paddingHorizontal: 28,
     borderRadius: BORDER_RADIUS.md,
   },
   primaryBtnText: {
-    color: COLORS.background,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });

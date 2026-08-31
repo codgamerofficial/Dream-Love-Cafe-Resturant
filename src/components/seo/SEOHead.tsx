@@ -25,6 +25,31 @@ export const SEOHead: React.FC<SEOProps> = ({
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.title = siteTitle;
 
+      // Google Fonts Preconnect
+      if (!document.querySelector('link[href="https://fonts.googleapis.com"]')) {
+        const preconnect1 = document.createElement('link');
+        preconnect1.rel = 'preconnect';
+        preconnect1.href = 'https://fonts.googleapis.com';
+        document.head.appendChild(preconnect1);
+      }
+
+      if (!document.querySelector('link[href="https://fonts.gstatic.com"]')) {
+        const preconnect2 = document.createElement('link');
+        preconnect2.rel = 'preconnect';
+        preconnect2.href = 'https://fonts.gstatic.com';
+        preconnect2.crossOrigin = 'anonymous';
+        document.head.appendChild(preconnect2);
+      }
+
+      // Google Fonts Stylesheet (DM Serif Display + Plus Jakarta Sans + Playfair Display)
+      const fontHref = 'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap';
+      if (!document.querySelector(`link[href="${fontHref}"]`)) {
+        const fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = fontHref;
+        document.head.appendChild(fontLink);
+      }
+
       // Update or create meta description
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
-import { Maximize2 } from 'lucide-react-native';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
+import { Maximize2, Camera } from 'lucide-react-native';
+import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 import { Lightbox } from '../../src/components/ui/Lightbox';
 
@@ -10,8 +10,8 @@ export default function GalleryPage() {
   const { galleryItems } = useSettings();
 
   const isMobile = width < 600;
-  const isTablet = width >= 600 && width < 900;
-  const isDesktop = width >= 900;
+  const isTablet = width >= 600 && width < 920;
+  const isDesktop = width >= 920;
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -29,7 +29,7 @@ export default function GalleryPage() {
           <Text style={styles.preTitle}>EDITORIAL VISUAL GALLERY</Text>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>The Dream Love Experience</Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Moments, signature dishes, handcrafted drinks, and warm evening dining atmosphere.
+            Moments, signature dishes, handcrafted drinks, and warm evening dining atmosphere in Contai.
           </Text>
         </View>
 
@@ -61,7 +61,7 @@ export default function GalleryPage() {
               </View>
 
               <View style={styles.expandBtn}>
-                <Maximize2 size={15} color={COLORS.cream} />
+                <Maximize2 size={14} color={COLORS.cream} />
               </View>
             </TouchableOpacity>
           ))}
@@ -82,56 +82,64 @@ export default function GalleryPage() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     backgroundColor: COLORS.background,
+    minHeight: '100%',
+    paddingBottom: SPACING.giant,
   },
   innerContainer: {
-    maxWidth: 1200,
+    maxWidth: LAYOUT.maxContainerWidth,
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xl,
+    marginHorizontal: 'auto',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xxl,
   },
   headerBox: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    textAlign: 'center',
+    marginBottom: SPACING.xxl,
   },
   preTitle: {
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: COLORS.brandTurquoise,
-    letterSpacing: 2,
-    marginBottom: 4,
+    letterSpacing: 2.5,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   title: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 32,
+    fontSize: 42,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   titleMobile: {
-    fontSize: 24,
+    fontSize: 28,
   },
   subtitle: {
-    fontSize: 13.5,
+    fontSize: 15,
     color: COLORS.textMuted,
     textAlign: 'center',
-    maxWidth: 580,
-    lineHeight: 19,
+    maxWidth: 600,
+    lineHeight: 23,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   subtitleMobile: {
-    fontSize: 12.5,
+    fontSize: 13.5,
+    lineHeight: 20,
   },
   galleryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 14,
+    gap: 18,
   },
   galleryCard: {
     width: '31.8%',
-    height: 260,
+    height: 270,
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
     position: 'relative',
@@ -141,16 +149,16 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   galleryCardTablet: {
-    width: '48.5%',
-    height: 240,
+    width: '48%',
+    height: 250,
   },
   galleryCardMobile: {
     width: '100%',
-    height: 210,
+    height: 220,
   },
   galleryCardFeatured: {
     width: '48.8%',
-    height: 280,
+    height: 290,
   },
   cardImage: {
     width: '100%',
@@ -162,7 +170,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.40)',
+    backgroundColor: 'rgba(18, 15, 14, 0.42)',
   },
   cardInfo: {
     position: 'absolute',
@@ -172,31 +180,33 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     color: COLORS.brandTurquoise,
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: 2,
     textTransform: 'uppercase',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   cardTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 2,
   },
   cardCaption: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: COLORS.creamMuted,
-    lineHeight: 15,
+    lineHeight: 16,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   expandBtn: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(18, 15, 14, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
