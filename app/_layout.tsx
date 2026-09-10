@@ -16,6 +16,7 @@ export default function RootLayout() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const isHome = pathname === '/';
   const isAdminOrAuthRoute = pathname.startsWith('/admin') || pathname.startsWith('/auth');
 
   return (
@@ -26,8 +27,8 @@ export default function RootLayout() {
             <StatusBar style="light" />
             <SEOHead />
 
-            {/* Public Header - Only rendered on public website pages */}
-            {!isAdminOrAuthRoute && <Header />}
+            {/* Public Header - Rendered on other public pages; on homepage, CinematicHero provides floating GlassNavigation */}
+            {!isAdminOrAuthRoute && !isHome && <Header />}
 
             {/* Main Page Slot & Footer */}
             {isAdminOrAuthRoute ? (

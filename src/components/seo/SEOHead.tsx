@@ -41,13 +41,142 @@ export const SEOHead: React.FC<SEOProps> = ({
         document.head.appendChild(preconnect2);
       }
 
-      // Google Fonts Stylesheet (DM Serif Display + Plus Jakarta Sans + Playfair Display)
-      const fontHref = 'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap';
+      // Google Fonts Stylesheet (Instrument Serif + Inter + DM Serif Display + Plus Jakarta Sans)
+      const fontHref = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
       if (!document.querySelector(`link[href="${fontHref}"]`)) {
         const fontLink = document.createElement('link');
         fontLink.rel = 'stylesheet';
         fontLink.href = fontHref;
         document.head.appendChild(fontLink);
+      }
+
+      // Inject Global Cinematic CSS Styles for Video Hero, Liquid Glass & Animations
+      if (!document.getElementById('dream-love-cinematic-styles')) {
+        const styleTag = document.createElement('style');
+        styleTag.id = 'dream-love-cinematic-styles';
+        styleTag.textContent = `
+          :root {
+            --dream-teal: #22D3C5;
+            --dream-pink: #F43F67;
+            --dream-copper: #C98255;
+            --dream-espresso: #120F0D;
+            --dream-surface: #1C1715;
+            --dream-cream: #F6F1EA;
+            --font-display: 'Instrument Serif', Georgia, serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          }
+
+          .font-display {
+            font-family: var(--font-display) !important;
+          }
+
+          .font-body {
+            font-family: var(--font-body) !important;
+          }
+
+          /* Liquid Glass Styles */
+          .liquid-glass {
+            background: rgba(255, 255, 255, 0.055) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08), 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+            transition: transform 200ms ease, background 200ms ease, border-color 200ms ease, box-shadow 200ms ease !important;
+          }
+
+          .liquid-glass:hover {
+            transform: translateY(-1px) scale(1.02) !important;
+            background: rgba(255, 255, 255, 0.085) !important;
+            border-color: rgba(255, 255, 255, 0.22) !important;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14), 0 14px 44px rgba(0, 0, 0, 0.22) !important;
+          }
+
+          /* Glass Navigation Container */
+          .glass-navigation {
+            background: rgba(18, 15, 13, 0.42) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.10) !important;
+            border-radius: 20px !important;
+          }
+
+          /* Cinematic Rise Keyframes */
+          @keyframes dream-love-rise {
+            from {
+              opacity: 0;
+              transform: translateY(24px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .animate-dream-rise {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) both;
+          }
+
+          .animate-dream-rise-delay-1 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.2s both;
+          }
+
+          .animate-dream-rise-delay-2 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.35s both;
+          }
+
+          .animate-dream-rise-delay-3 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.5s both;
+          }
+
+          .animate-dream-rise-delay-4 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.65s both;
+          }
+
+          .animate-dream-rise-delay-5 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.8s both;
+          }
+
+          .animate-dream-rise-delay-6 {
+            animation: dream-love-rise 0.8s cubic-bezier(.22, 1, .36, 1) 0.9s both;
+          }
+
+          /* Minimal Scroll Indicator Line Pulse */
+          @keyframes pulse-scroll-line {
+            0% {
+              transform: translateY(0);
+              opacity: 0.2;
+            }
+            50% {
+              transform: translateY(10px);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(18px);
+              opacity: 0.1;
+            }
+          }
+
+          .animate-scroll-pulse {
+            animation: pulse-scroll-line 2.4s ease-in-out infinite;
+          }
+
+          /* Accessibility: Prefers Reduced Motion */
+          @media (prefers-reduced-motion: reduce) {
+            .animate-dream-rise,
+            .animate-dream-rise-delay-1,
+            .animate-dream-rise-delay-2,
+            .animate-dream-rise-delay-3,
+            .animate-dream-rise-delay-4,
+            .animate-dream-rise-delay-5,
+            .animate-dream-rise-delay-6,
+            .animate-scroll-pulse {
+              animation: none !important;
+              opacity: 1 !important;
+              transform: none !important;
+            }
+          }
+        `;
+        document.head.appendChild(styleTag);
       }
 
       // Update or create meta description

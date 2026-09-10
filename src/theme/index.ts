@@ -62,16 +62,26 @@ export const COLORS = {
   // Overlays
   overlay: 'rgba(18, 15, 14, 0.75)',
   overlayDeep: 'rgba(13, 11, 10, 0.88)',
+  // Dream Love Brand Tokens
+  dreamTeal: '#22D3C5',
+  dreamPink: '#F43F67',
+  dreamCopper: '#C98255',
+  dreamEspresso: '#120F0D',
+  dreamSurface: '#1C1715',
+  dreamCream: '#F6F1EA',
   overlayHero: 'rgba(13, 11, 10, 0.82)',
   vignette: 'radial-gradient(ellipse at center, rgba(18, 15, 14, 0.35) 0%, rgba(13, 11, 10, 0.94) 100%)',
 };
 
 export const TYPOGRAPHY = {
+  fontFamilyDisplay: Platform.OS === 'web'
+    ? '"Instrument Serif", Georgia, serif'
+    : 'Georgia',
   fontFamilySerif: Platform.OS === 'web' 
     ? '"DM Serif Display", "Playfair Display", Georgia, "Times New Roman", serif' 
     : 'Georgia',
   fontFamilySans: Platform.OS === 'web' 
-    ? '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' 
+    ? '"Inter", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' 
     : 'System',
 };
 

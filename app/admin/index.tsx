@@ -816,6 +816,14 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
   }, [realPhotosCount, totalItemsCount, menuItems.length, orders, reservations, verifiedReviews.length, galleryItems.length, dataConflicts, isOwnerOrAdmin, staffProfiles]);
 
   // ── Authentication Check & Redirect ─────────────────────────────────────
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/admin/login');
+    } else if (!authLoading && user && !isAuthorized) {
+      router.replace('/admin/access-denied');
+    }
+  }, [authLoading, user, isAuthorized, router]);
+
   if (authLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -851,7 +859,46 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
               onPress={() => router.push('/admin/signup')}
             >
               <UserPlus size={16} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
-              <Text style={styles.signupLinkText}>Create Admin Account</Text>
+              <Text style={styles.signupLinkText}>Register Staff Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <View style={styles.unauthorizedContainer}>
+        <View style={styles.unauthorizedCard}>
+          <View style={[styles.shieldIconBox, { backgroundColor: 'rgba(239, 83, 80, 0.15)', borderColor: 'rgba(239, 83, 80, 0.3)' }]}>
+            <AlertCircle size={40} color={COLORS.errorLight} />
+          </View>
+          <Text style={styles.unauthorizedTitle}>Access Restricted</Text>
+          <Text style={styles.unauthorizedSub}>
+            Your email ({user.email || 'signed in'}) is not authorized for the Dream Love admin portal.
+          </Text>
+          <Text style={[styles.unauthorizedSub, { fontSize: 13, marginTop: 4, color: COLORS.textMuted }]}>
+            Only authorized staff and management emails have access to this portal. Please contact the general manager to be added to the staff roster.
+          </Text>
+
+          <View style={styles.unauthorizedActions}>
+            <TouchableOpacity 
+              style={[styles.signInBtn, { backgroundColor: COLORS.dreamPink }]}
+              onPress={async () => {
+                await logout();
+                router.replace('/admin/login');
+              }}
+            >
+              <LogOut size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.signInBtnText}>Sign Out & Switch Account</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.signupLinkBtn}
+              onPress={() => router.replace('/')}
+            >
+              <Text style={styles.signupLinkText}>Return to Homepage</Text>
             </TouchableOpacity>
           </View>
         </View>

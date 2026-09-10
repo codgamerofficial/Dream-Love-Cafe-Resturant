@@ -1,12 +1,32 @@
 /**
  * Lightweight Zero-Dependency Local Static Server
- * For testing dist/ production build
+ * For testing dist/ production build with API endpoints
  */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 3000;
+// Load environment variables from .env
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const [key, ...rest] = trimmed.split('=');
+        const val = rest.join('=').replace(/^["']|["']$/g, '').trim();
+        if (!process.env[key.trim()]) {
+          process.env[key.trim()] = val;
+        }
+      }
+    });
+  }
+} catch (e) {
+  console.log('Notice loading .env:', e.message);
+}
+
+const PORT = process.env.PORT || 8081;
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 const MIME_TYPES = {
@@ -22,8 +42,20 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   let reqPath = req.url.split('?')[0];
+
+  // Route: /api/auth/authorize
+  if (reqPath === '/api/auth/authorize') {
+    try {
+      const authorizeHandler = require('../api/auth/authorize');
+      return await authorizeHandler(req, res);
+    } catch (apiErr) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: apiErr.message }));
+    }
+  }
+
   if (reqPath === '/') reqPath = '/index.html';
 
   let filePath = path.join(DIST_DIR, reqPath);

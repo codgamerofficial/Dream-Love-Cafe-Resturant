@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { verifyServerAuthorization } from '../config/auth';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff';
@@ -30,11 +31,6 @@ interface AuthContextType {
   logout: () => Promise<{ success: boolean; error?: string }>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
-  // Legacy / fallback helpers
-  requestStaffAccess?: (data: { fullName: string; email: string; phone?: string }) => Promise<{ error: string | null; success?: boolean; message?: string }>;
-  loginWithEmail?: (email: string, pass: string) => Promise<{ error: string | null }>;
-  signUp?: (email: string, password: string, fullName: string) => Promise<{ error: string | null; message?: string }>;
-  sendPasswordReset?: (email: string) => Promise<{ error: string | null; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +49,7 @@ const OFFLINE_AUTH_KEY = '@dream_love_offline_auth_session_v1';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   // ── Ensure / Fetch Profile from 'profiles' Table ─────────────────────────
@@ -90,8 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // 3. If no profile exists, automatically create an active admin profile
-      const defaultName = authUser.user_metadata?.full_name || userEmail?.split('@')[0] || 'Restaurant Administrator';
+      // 3. Auto-create active profile for authorized user (NO owner approval required)
+      const defaultName = authUser.user_metadata?.full_name || userEmail?.split('@')[0] || 'Restaurant Staff';
       const { data: newProfile, error: createErr } = await supabase
         .from('profiles')
         .insert([{
@@ -108,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return newProfile as UserProfile;
       }
 
-      // Fallback in-memory profile if database insert fails
+      // Fallback in-memory profile
       return {
         id: authUser.id,
         auth_user_id: authUser.id,
@@ -124,12 +121,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const refreshProfile = useCallback(async () => {
-    if (user) {
-      if (isSupabaseConfigured && supabase) {
-        const p = await fetchOrCreateProfile(user);
-        setProfile(p);
+  // ── Server-Side Authorization Validator ──────────────────────────────────
+  const validateSessionAuthorization = useCallback(async (session: any): Promise<boolean> => {
+    if (!session?.access_token || !session?.user) {
+      setIsAuthorized(false);
+      return false;
+    }
+
+    try {
+      const serverResult = await verifyServerAuthorization(session.access_token);
+      if (serverResult.authorized) {
+        setIsAuthorized(true);
+        return true;
+      } else {
+        setIsAuthorized(false);
+        return false;
       }
+    } catch (e) {
+      console.warn('Authorization verification check error:', e);
+      setIsAuthorized(false);
+      return false;
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (user && isSupabaseConfigured && supabase) {
+      const p = await fetchOrCreateProfile(user);
+      setProfile(p);
     }
   }, [user, fetchOrCreateProfile]);
 
@@ -139,34 +157,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     async function initAuth() {
       if (!isSupabaseConfigured || !supabase) {
-        // Check local offline session
-        try {
-          const rawSession = await AsyncStorage.getItem(OFFLINE_AUTH_KEY);
-          if (rawSession && isMounted) {
-            const parsed = JSON.parse(rawSession);
-            setUser(parsed.user);
-            setProfile(parsed.profile);
-          }
-        } catch {
-          // No active local session
-        }
         if (isMounted) setLoading(false);
         return;
       }
 
-      // Check active Supabase session
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const authUser = session?.user ?? null;
-        if (isMounted) setUser(authUser);
-        if (authUser && isMounted) {
-          const p = await fetchOrCreateProfile(authUser);
-          if (isMounted) setProfile(p);
+
+        if (authUser && session && isMounted) {
+          const authorized = await validateSessionAuthorization(session);
+          if (authorized && isMounted) {
+            setUser(authUser);
+            const p = await fetchOrCreateProfile(authUser);
+            if (isMounted) setProfile(p);
+          } else if (isMounted) {
+            // Unauthorized session -> terminate
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setIsAuthorized(false);
+          }
+        } else if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setIsAuthorized(false);
         }
       } catch {
         if (isMounted) {
           setUser(null);
           setProfile(null);
+          setIsAuthorized(false);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -175,12 +196,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Listen to real-time auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         const authUser = session?.user ?? null;
-        if (isMounted) setUser(authUser);
-        if (authUser && isMounted) {
-          const p = await fetchOrCreateProfile(authUser);
-          if (isMounted) setProfile(p);
+
+        if (authUser && session && isMounted) {
+          const authorized = await validateSessionAuthorization(session);
+          if (authorized && isMounted) {
+            setUser(authUser);
+            const p = await fetchOrCreateProfile(authUser);
+            if (isMounted) setProfile(p);
+          } else if (isMounted) {
+            setUser(null);
+            setProfile(null);
+            setIsAuthorized(false);
+          }
         } else if (isMounted) {
+          setUser(null);
           setProfile(null);
+          setIsAuthorized(false);
         }
         if (isMounted) setLoading(false);
       });
@@ -195,9 +226,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isMounted = false;
     };
-  }, [fetchOrCreateProfile]);
+  }, [fetchOrCreateProfile, validateSessionAuthorization]);
 
-  // ── Send Passwordless Magic Link (OTP) ──────────────────────────────────
+  // ── Send Passwordless Magic Link ─────────────────────────────────────────
   const sendMagicLink = async (
     email: string,
     fullName?: string
@@ -213,28 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (!isSupabaseConfigured || !supabase) {
-      // Offline / Local preview fallback: instantly activate local administrator session
-      const fallbackUser = {
-        id: `offline-admin-${Date.now()}`,
-        email: cleanEmail,
-        user_metadata: { full_name: fullName?.trim() || 'Restaurant Administrator' },
-      };
-      const fallbackProfile: UserProfile = {
-        id: fallbackUser.id,
-        auth_user_id: fallbackUser.id,
-        full_name: fullName?.trim() || cleanEmail.split('@')[0] || 'Restaurant Administrator',
-        email: cleanEmail,
-        role: 'admin',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setUser(fallbackUser);
-      setProfile(fallbackProfile);
-      try {
-        await AsyncStorage.setItem(OFFLINE_AUTH_KEY, JSON.stringify({ user: fallbackUser, profile: fallbackProfile }));
-      } catch {}
-      return { error: null, success: true };
+      return { error: 'Authentication service is currently unconfigured. Please check environment settings.' };
     }
 
     try {
@@ -255,59 +265,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        if (error.message.includes('rate limit') || error.status === 429) {
-          return { error: 'Please wait a moment before requesting another link.' };
+        if (error.message?.includes('rate limit') || error.status === 429) {
+          return { error: 'Too many requests. Please wait a moment before requesting another link.' };
         }
-        return { error: "We couldn't send the sign-in link. Please try again." };
+        if (
+          error.name === 'AuthRetryableFetchError' ||
+          error.message?.includes('fetch failed') ||
+          error.message?.includes('Failed to fetch') ||
+          error.status === 0
+        ) {
+          return { error: 'Authentication service is temporarily unreachable. Please verify that your Supabase project is active.' };
+        }
+        return { error: error.message || "We couldn't send the sign-in link. Please try again." };
       }
 
       return { error: null, success: true };
-    } catch {
-      return { error: "We couldn't send the sign-in link. Please try again." };
+    } catch (err: any) {
+      if (
+        err?.name === 'AuthRetryableFetchError' ||
+        err?.message?.includes('fetch failed') ||
+        err?.message?.includes('Failed to fetch')
+      ) {
+        return { error: 'Authentication service is temporarily unreachable. Please verify that your Supabase project is active.' };
+      }
+      return { error: err?.message || "We couldn't send the sign-in link. Please try again." };
     }
   };
 
-  // ── Sign Out & Complete Session Invalidation ────────────────────────────
+  // ── Sign Out & Session Invalidation ──────────────────────────────────────
   const logout = async (): Promise<{ success: boolean; error?: string }> => {
     let logoutError: string | undefined;
 
-    // 1. Purge local offline/fallback session
+    // 1. Clear local session cache
     try {
       await AsyncStorage.removeItem(OFFLINE_AUTH_KEY);
     } catch (storageErr: any) {
-      console.warn('Local session storage clear notice:', storageErr);
+      console.warn('Storage clear notice:', storageErr);
     }
 
-    // 2. Terminate remote Supabase session & revoke server token
+    // 2. Terminate remote Supabase session & revoke token
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        const { error } = await supabase.auth.signOut();
         if (error) {
-          console.warn('Supabase remote sign out notice:', error.message);
           logoutError = error.message;
         }
       } catch (err: any) {
-        console.error('Logout execution notice:', err);
         logoutError = err?.message || 'Failed to terminate remote session';
       }
     }
 
-    // 3. Clear in-memory state unconditionally so user is never trapped
+    // 3. Reset in-memory state unconditionally
     setUser(null);
     setProfile(null);
+    setIsAuthorized(false);
 
     return { success: true, error: logoutError };
   };
 
   // ── Role & Permission Helpers ──────────────────────────────────────────
   const hasRole = (...roles: string[]): boolean => {
-    if (!user) return false;
+    if (!user || !isAuthorized) return false;
     if (roles.length === 0) return true;
     return roles.includes(profile?.role || 'admin');
   };
-
-  // Every authenticated user has immediate admin access
-  const isAuthorized = Boolean(user);
 
   return (
     <AuthContext.Provider
@@ -337,5 +358,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-

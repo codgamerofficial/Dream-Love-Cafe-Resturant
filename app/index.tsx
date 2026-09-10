@@ -37,6 +37,7 @@ import { MenuCard } from '../src/components/menu/MenuCard';
 import { Lightbox } from '../src/components/ui/Lightbox';
 import { analytics } from '../src/services/analytics';
 import { GalleryItem } from '../src/types';
+import { CinematicHero } from '../src/components/hero';
 
 export default function HomePage() {
   const router = useRouter();
@@ -132,91 +133,8 @@ export default function HomePage() {
   return (
     <View style={styles.container}>
       
-      {/* ── 1. CINEMATIC FULL-WIDTH HERO ── */}
-      <View style={[styles.heroSection, isMobile && styles.heroSectionMobile]}>
-        <Image
-          source={{ uri: '/photos/storefront_signboard.jpg' }}
-          style={styles.heroBackgroundImage}
-          resizeMode="cover"
-        />
-        <View style={styles.heroOverlay} />
-
-        <View style={styles.heroContent}>
-          {/* Brand Eyebrow with ECG heartbeat line accent */}
-          <View style={styles.heroEyebrowRow}>
-            <View style={styles.pulseLineLeft} />
-            <Text style={styles.heroEyebrow}>DREAM LOVE CAFÉ & RESTAURANT</Text>
-            <View style={styles.pulseLineRight} />
-          </View>
-
-          {/* Large Editorial Headline */}
-          <Text style={[
-            styles.heroTitle, 
-            isSmallMobile && styles.heroTitleSmallMobile, 
-            isMobile && !isSmallMobile && styles.heroTitleMobile,
-            isTablet && styles.heroTitleTablet
-          ]}>
-            Good Food.{'\n'}Warm Moments.{'\n'}Made with Love.
-          </Text>
-
-          {/* Supporting Line */}
-          <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile]}>
-            An intimate multi-cuisine dining destination in Contai, West Bengal. Serving comforting North Indian classics, clay-oven tandoor, authentic dum biryani, Chinese dishes, and handcrafted café beverages.
-          </Text>
-
-          {/* Primary Action Buttons */}
-          <View style={[styles.heroCtaContainer, isMobile && styles.heroCtaContainerMobile]}>
-            <TouchableOpacity
-              style={[styles.heroBtn, styles.heroPrimaryBtn, isMobile && styles.heroBtnFullWidth]}
-              onPress={() => router.push('/menu')}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Explore our complete menu"
-            >
-              <Utensils size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.heroPrimaryBtnText}>Explore Menu</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.heroBtn, styles.heroSecondaryBtn, isMobile && styles.heroBtnFullWidth]}
-              onPress={() => router.push('/book')}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Reserve a table"
-            >
-              <Calendar size={16} color={COLORS.brandTurquoise} style={{ marginRight: 8 }} />
-              <Text style={styles.heroSecondaryBtnText}>Reserve a Table</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.heroTextLink}
-              onPress={handleOpenMaps}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.heroTextLinkContent}>Get Directions</Text>
-              <ArrowRight size={14} color={COLORS.copperLight} style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Compact Trust Information Strip */}
-          <View style={styles.heroTrustStrip}>
-            <View style={styles.trustItem}>
-              <MapPin size={13} color={COLORS.copper} style={{ marginRight: 5 }} />
-              <Text style={styles.trustItemText}>Contai, West Bengal</Text>
-            </View>
-            <Text style={styles.trustDivider}>•</Text>
-            <View style={styles.trustItem}>
-              <Clock size={13} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
-              <Text style={styles.trustItemText}>Open 12:00 PM – 12:00 AM</Text>
-            </View>
-            <Text style={styles.trustDivider}>•</Text>
-            <View style={styles.trustItem}>
-              <Star size={13} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 5 }} />
-              <Text style={styles.trustItemText}>Google ★ {settings.googleRating} ({settings.googleReviewsCount}+ Reviews)</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      {/* ── 1. CINEMATIC FULL-SCREEN VIDEO HERO ── */}
+      <CinematicHero />
 
       {/* ── 2. QUICK TRUST & CUISINE RIBBON ── */}
       <View style={styles.ribbonSection}>

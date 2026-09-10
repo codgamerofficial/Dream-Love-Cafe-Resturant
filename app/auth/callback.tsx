@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ShieldCheck, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react-native';
+import { ShieldCheck, AlertCircle, ArrowLeft, ShieldX, CheckCircle2 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../src/theme';
 import { supabase, isSupabaseConfigured } from '../../src/services/supabase';
-import { AuthPageShell } from '../../src/components/auth/AuthPageShell';
+import { verifyServerAuthorization } from '../../src/config/auth';
+import { BrandLogo } from '../../src/components/ui/BrandLogo';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
+  const [status, setStatus] = useState<'verifying' | 'success' | 'unauthorized' | 'error'>('verifying');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
@@ -18,62 +19,119 @@ export default function AuthCallbackPage() {
       if (!isSupabaseConfigured || !supabase) {
         if (isMounted) {
           setStatus('error');
-          setErrorMessage('Authentication service is currently unavailable.');
+          setErrorMessage('Authentication service is currently unavailable. Please verify configuration.');
         }
         return;
       }
 
       try {
-        // 1. Process PKCE auth code in query parameters (?code=...)
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          const urlParams = new URLSearchParams(window.location.search);
-          const code = urlParams.get('code');
-          const errorParam = urlParams.get('error_description') || urlParams.get('error');
+        let authSession: any = null;
 
-          if (errorParam) {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          // ── 1. Handle URL Hash Token Callback (#access_token=...&refresh_token=...) ──
+          const hashRaw = window.location.hash;
+          if (hashRaw && hashRaw.includes('access_token')) {
+            const hashClean = hashRaw.startsWith('#') ? hashRaw.substring(1) : hashRaw;
+            const hashParams = new URLSearchParams(hashClean);
+
+            const errorParam = hashParams.get('error_description') || hashParams.get('error');
+            if (errorParam) {
+              if (isMounted) {
+                setStatus('error');
+                setErrorMessage(decodeURIComponent(errorParam));
+              }
+              return;
+            }
+
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              const { data: setSessionData, error: setSessionErr } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (!setSessionErr && setSessionData?.session) {
+                authSession = setSessionData.session;
+              }
+            }
+
+            // Immediately sanitize URL hash so tokens are never exposed in address bar
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch {}
+          }
+
+          // ── 2. Handle PKCE Query Code Callback (?code=...) ──
+          const queryParams = new URLSearchParams(window.location.search);
+          const code = queryParams.get('code');
+          const queryError = queryParams.get('error_description') || queryParams.get('error');
+
+          if (queryError) {
             if (isMounted) {
               setStatus('error');
-              setErrorMessage(decodeURIComponent(errorParam));
+              setErrorMessage(decodeURIComponent(queryError));
             }
             return;
           }
 
           if (code) {
-            const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeErr) {
-              console.warn('Code exchange note:', exchangeErr.message);
+            const { data: exchangeData, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+            if (!exchangeErr && exchangeData?.session) {
+              authSession = exchangeData.session;
+            }
+
+            // Clean query code parameter from URL
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch {}
+          }
+        }
+
+        // ── 3. Verify Session If Not Yet Loaded ──
+        if (!authSession) {
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
+          if (existingSession?.user) {
+            authSession = existingSession;
+          } else {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) {
+              authSession = { user: currentUser };
             }
           }
         }
 
-        // 2. Obtain authenticated session
-        let { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError || !session?.user) {
-          // Fallback check getUser()
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          if (!currentUser) {
-            if (isMounted) {
-              setStatus('error');
-              setErrorMessage('The sign-in link has expired or has already been used. Please request a new link.');
-            }
-            return;
-          }
-          session = { user: currentUser } as any;
-        }
-
-        const authUser = session?.user;
-        if (!authUser) {
+        if (!authSession?.user || !authSession?.access_token) {
           if (isMounted) {
             setStatus('error');
-            setErrorMessage('Unable to verify your session. Please try signing in again.');
+            setErrorMessage('The sign-in link has expired or has already been used. Please request a new magic link.');
           }
           return;
         }
 
-        // 3. Ensure active admin profile exists in database
+        const authUser = authSession.user;
         const userEmail = authUser.email?.toLowerCase().trim();
-        const defaultName = authUser.user_metadata?.full_name || userEmail?.split('@')[0] || 'Restaurant Administrator';
+
+        // ── 4. Perform Server-Side Authorization Check ──
+        const serverAuth = await verifyServerAuthorization(authSession.access_token);
+
+        if (!serverAuth.authorized) {
+          // Immediately terminate remote session for unauthorized email
+          await supabase.auth.signOut();
+          if (isMounted) {
+            setStatus('unauthorized');
+            setErrorMessage(serverAuth.error || "Admin access isn't available for this email address.");
+          }
+          // Redirect unauthorized users to /admin/access-denied
+          setTimeout(() => {
+            if (isMounted) router.replace('/admin/access-denied');
+          }, 1500);
+          return;
+        }
+
+        // ── 5. Ensure Active Database Profile Exists (NO Owner Approval Required) ──
+        const defaultName = authUser.user_metadata?.full_name || userEmail?.split('@')[0] || 'Restaurant Staff';
 
         try {
           const { data: existingProfile } = await supabase
@@ -83,7 +141,6 @@ export default function AuthCallbackPage() {
             .maybeSingle();
 
           if (!existingProfile) {
-            // Check if profile exists by email to link
             const { data: profileByEmail } = await supabase
               .from('profiles')
               .select('id')
@@ -101,7 +158,6 @@ export default function AuthCallbackPage() {
                 })
                 .eq('id', profileByEmail.id);
             } else {
-              // Create new active admin profile
               await supabase
                 .from('profiles')
                 .insert([{
@@ -114,21 +170,23 @@ export default function AuthCallbackPage() {
             }
           }
         } catch (dbErr) {
-          console.warn('Profile initialization note:', dbErr);
+          console.warn('Profile sync notice:', dbErr);
         }
 
-        if (!isMounted) return;
+        // ── 6. Redirect Authorized Staff to Admin Dashboard ──
+        if (isMounted) {
+          setStatus('success');
+        }
 
-        // 4. Immediate Access to /admin
-        setStatus('success');
         setTimeout(() => {
-          router.replace('/admin');
-        }, 500);
-
+          if (isMounted) {
+            router.replace('/admin/dashboard');
+          }
+        }, 800);
       } catch (err: any) {
         if (isMounted) {
           setStatus('error');
-          setErrorMessage(err?.message || 'Unable to complete sign-in.');
+          setErrorMessage(err?.message || 'Failed to complete authentication. Please try again.');
         }
       }
     }
@@ -138,138 +196,164 @@ export default function AuthCallbackPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
 
   return (
-    <AuthPageShell>
-      {status === 'verifying' && (
-        <View style={styles.contentBox}>
-          <ActivityIndicator size="large" color={COLORS.brandTurquoise} style={{ marginBottom: SPACING.md }} />
-          <Text style={styles.title}>Signing you in...</Text>
-          <Text style={styles.subtitle}>Verifying your secure sign-in link.</Text>
+    <View style={styles.container}>
+      <View style={styles.card}>
+        <View style={styles.logoBox}>
+          <BrandLogo size="md" variant="primary" />
         </View>
-      )}
 
-      {status === 'success' && (
-        <View style={styles.contentBox}>
-          <View style={styles.successIconBox}>
-            <ShieldCheck size={38} color={COLORS.brandTurquoise} />
+        {status === 'verifying' && (
+          <View style={styles.content}>
+            <View style={styles.iconCircle}>
+              <ActivityIndicator size="large" color={COLORS.brandTurquoise} />
+            </View>
+            <Text style={styles.title}>Verifying Credentials</Text>
+            <Text style={styles.subtitle}>
+              Securing authentication session and validating server authorization...
+            </Text>
           </View>
-          <Text style={styles.title}>Authentication Verified</Text>
-          <Text style={styles.subtitle}>Welcome! Opening the management dashboard...</Text>
-        </View>
-      )}
+        )}
 
-      {status === 'error' && (
-        <View style={styles.contentBox}>
-          <View style={styles.errorIconBox}>
-            <AlertCircle size={38} color={COLORS.errorLight} />
+        {status === 'success' && (
+          <View style={styles.content}>
+            <View style={[styles.iconCircle, styles.iconCircleSuccess]}>
+              <CheckCircle2 size={38} color={COLORS.brandTurquoise} />
+            </View>
+            <Text style={styles.title}>Access Authorized</Text>
+            <Text style={styles.subtitle}>
+              Authentication confirmed. Redirecting to management dashboard...
+            </Text>
+            <ActivityIndicator size="small" color={COLORS.brandTurquoise} style={{ marginTop: 12 }} />
           </View>
-          <Text style={styles.title}>Unable to complete sign-in</Text>
-          <Text style={styles.subtitle}>
-            {errorMessage || 'This sign-in link is invalid or has expired.'}
-          </Text>
+        )}
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.replace('/admin/login')}
+        {status === 'unauthorized' && (
+          <View style={styles.content}>
+            <View style={[styles.iconCircle, styles.iconCircleError]}>
+              <ShieldX size={38} color={COLORS.errorLight} />
+            </View>
+            <Text style={styles.title}>Access Restricted</Text>
+            <Text style={styles.subtitle}>
+              {errorMessage || "Admin access isn't available for this email address."}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => router.replace('/admin/access-denied')}
+              activeOpacity={0.85}
             >
-              <RefreshCw size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.primaryBtnText}>Try Again</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.secondaryBtn}
-              onPress={() => router.replace('/admin/login')}
-            >
-              <ArrowLeft size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
-              <Text style={styles.secondaryBtnText}>Back to Sign In</Text>
+              <Text style={styles.actionBtnText}>View Access Details</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-    </AuthPageShell>
+        )}
+
+        {status === 'error' && (
+          <View style={styles.content}>
+            <View style={[styles.iconCircle, styles.iconCircleError]}>
+              <AlertCircle size={38} color={COLORS.errorLight} />
+            </View>
+            <Text style={styles.title}>Sign In Failed</Text>
+            <Text style={styles.subtitle}>
+              {errorMessage || 'Unable to authenticate. The link may have expired.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => router.replace('/admin/login')}
+              activeOpacity={0.85}
+            >
+              <ArrowLeft size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.actionBtnText}>Return to Admin Login</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  contentBox: {
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  card: {
     width: '100%',
+    maxWidth: 440,
+    backgroundColor: 'rgba(28, 23, 21, 0.95)',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
     alignItems: 'center',
-    paddingVertical: SPACING.md,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  successIconBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+  logoBox: {
+    marginBottom: SPACING.lg,
+  },
+  content: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(45, 212, 191, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.25)',
+  },
+  iconCircleSuccess: {
     backgroundColor: 'rgba(45, 212, 191, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.3)',
+    borderColor: 'rgba(45, 212, 191, 0.40)',
   },
-  errorIconBox: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+  iconCircleError: {
     backgroundColor: 'rgba(239, 83, 80, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 83, 80, 0.3)',
+    borderColor: 'rgba(239, 83, 80, 0.35)',
   },
   title: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 24,
-    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilyDisplay,
+    fontSize: 28,
+    fontWeight: '600',
     color: COLORS.cream,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: SPACING.xl,
-    maxWidth: 380,
+    lineHeight: 20,
+    marginBottom: SPACING.lg,
   },
-  actionRow: {
-    width: '100%',
-    maxWidth: 360,
-    gap: 10,
-  },
-  primaryBtn: {
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.brandHeart,
-    paddingVertical: 13,
+    backgroundColor: COLORS.dreamPink,
+    height: 48,
     borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 24,
     width: '100%',
+    marginTop: 4,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+    } as any : {}),
   },
-  primaryBtnText: {
+  actionBtnText: {
     color: '#FFFFFF',
     fontSize: 14.5,
     fontWeight: '700',
-  },
-  secondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.md,
-    width: '100%',
-  },
-  secondaryBtnText: {
-    color: COLORS.cream,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
