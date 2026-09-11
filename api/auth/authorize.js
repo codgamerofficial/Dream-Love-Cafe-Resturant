@@ -7,6 +7,33 @@
  */
 const { createClient } = require('@supabase/supabase-js');
 
+// Helper to parse request body if not already parsed
+function getRequestBody(req) {
+  return new Promise((resolve) => {
+    if (req.body && typeof req.body === 'object') {
+      return resolve(req.body);
+    }
+    if (typeof req.body === 'string') {
+      try {
+        return resolve(JSON.parse(req.body));
+      } catch {
+        return resolve({});
+      }
+    }
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
 module.exports = async function handler(req, res) {
   // 1. Enable CORS for local development and preview deployments
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +46,35 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 2. Extract Authorization Bearer Token
+    const rawAllowedEmails = process.env.AUTHORIZED_STAFF_EMAILS || '';
+    const allowedList = rawAllowedEmails
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    // 2. Check if this is an email authorization pre-check (for Account Creation)
+    const body = await getRequestBody(req);
+    if (body && body.action === 'check-email' && body.email) {
+      const checkEmail = String(body.email).trim().toLowerCase();
+      const isAllowed = allowedList.includes(checkEmail);
+
+      res.setHeader('Content-Type', 'application/json');
+      if (!isAllowed) {
+        res.statusCode = 403;
+        return res.end(JSON.stringify({
+          authorized: false,
+          error: "This email is not authorized for the Dream Love admin portal.",
+        }));
+      }
+
+      res.statusCode = 200;
+      return res.end(JSON.stringify({
+        authorized: true,
+        email: checkEmail,
+      }));
+    }
+
+    // 3. Otherwise, perform Bearer Token verification for authenticated sessions
     const authHeader = req.headers.authorization || req.headers.Authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '';
 
@@ -32,7 +87,7 @@ module.exports = async function handler(req, res) {
       }));
     }
 
-    // 3. Initialize Supabase Auth Client
+    // 4. Initialize Supabase Auth Client
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -49,7 +104,7 @@ module.exports = async function handler(req, res) {
       auth: { persistSession: false, autoRefreshToken: false }
     });
 
-    // 4. Authenticate JWT token securely with Supabase Auth
+    // 5. Authenticate JWT token securely with Supabase Auth
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
 
     if (authErr || !user || !user.email) {
@@ -61,14 +116,7 @@ module.exports = async function handler(req, res) {
       }));
     }
 
-    // 5. Server-side allowlist evaluation
-    // Uses private server-side environment variable AUTHORIZED_STAFF_EMAILS
-    const rawAllowedEmails = process.env.AUTHORIZED_STAFF_EMAILS || '';
-    const allowedList = rawAllowedEmails
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean);
-
+    // 6. Server-side allowlist evaluation
     const userEmail = user.email.trim().toLowerCase();
     const isAuthorized = allowedList.includes(userEmail);
 
@@ -78,7 +126,7 @@ module.exports = async function handler(req, res) {
       res.statusCode = 403;
       return res.end(JSON.stringify({
         authorized: false,
-        error: "Admin access isn't available for this email address.",
+        error: "This email is not authorized for the Dream Love admin portal.",
         email: userEmail,
       }));
     }

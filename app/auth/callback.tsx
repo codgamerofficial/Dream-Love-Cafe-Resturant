@@ -27,12 +27,18 @@ export default function AuthCallbackPage() {
       try {
         let authSession: any = null;
 
+        let isRecovery = false;
+
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           // ── 1. Handle URL Hash Token Callback (#access_token=...&refresh_token=...) ──
           const hashRaw = window.location.hash;
           if (hashRaw && hashRaw.includes('access_token')) {
             const hashClean = hashRaw.startsWith('#') ? hashRaw.substring(1) : hashRaw;
             const hashParams = new URLSearchParams(hashClean);
+
+            if (hashParams.get('type') === 'recovery') {
+              isRecovery = true;
+            }
 
             const errorParam = hashParams.get('error_description') || hashParams.get('error');
             if (errorParam) {
@@ -67,6 +73,10 @@ export default function AuthCallbackPage() {
           const queryParams = new URLSearchParams(window.location.search);
           const code = queryParams.get('code');
           const queryError = queryParams.get('error_description') || queryParams.get('error');
+
+          if (queryParams.get('type') === 'recovery') {
+            isRecovery = true;
+          }
 
           if (queryError) {
             if (isMounted) {
@@ -105,7 +115,7 @@ export default function AuthCallbackPage() {
         if (!authSession?.user || !authSession?.access_token) {
           if (isMounted) {
             setStatus('error');
-            setErrorMessage('The sign-in link has expired or has already been used. Please request a new magic link.');
+            setErrorMessage('The authentication link has expired or has already been used. Please request a new link from the login page.');
           }
           return;
         }
@@ -173,14 +183,18 @@ export default function AuthCallbackPage() {
           console.warn('Profile sync notice:', dbErr);
         }
 
-        // ── 6. Redirect Authorized Staff to Admin Dashboard ──
+        // ── 6. Redirect to Reset Password (if recovery) or Dashboard ──
         if (isMounted) {
           setStatus('success');
         }
 
         setTimeout(() => {
           if (isMounted) {
-            router.replace('/admin/dashboard');
+            if (isRecovery) {
+              router.replace('/admin/reset-password');
+            } else {
+              router.replace('/admin/dashboard');
+            }
           }
         }, 800);
       } catch (err: any) {

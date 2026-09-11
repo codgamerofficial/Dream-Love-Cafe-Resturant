@@ -4,23 +4,28 @@ import {
   ActivityIndicator, Platform 
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { UserPlus, AlertCircle, Mail, ArrowLeft, RefreshCw, User, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
+import { 
+  UserPlus, AlertCircle, Mail, ArrowRight, User, 
+  Lock, Eye, EyeOff, ShieldCheck, CheckCircle2 
+} from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../src/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import { AuthPageShell } from '../../src/components/auth/AuthPageShell';
 
 export default function AdminSignupPage() {
   const router = useRouter();
-  const { user, isAuthorized, loading, sendMagicLink } = useAuth();
+  const { user, isAuthorized, loading, registerAdminAccount } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState('');
-  const [cooldown, setCooldown] = useState(0);
-  const [focusedField, setFocusedField] = useState<'name' | 'email' | null>(null);
+  const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | 'confirm' | null>(null);
 
   // Auto-redirect if already signed in and authorized
   useEffect(() => {
@@ -29,21 +34,16 @@ export default function AdminSignupPage() {
     }
   }, [isAuthorized, user, loading, router]);
 
-  // Resend cooldown timer
+  // Auto-redirect to login after success countdown
   useEffect(() => {
     let timer: any;
-    if (cooldown > 0) {
-      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    if (isSuccess) {
+      timer = setTimeout(() => {
+        router.replace('/admin/login');
+      }, 3500);
     }
     return () => clearTimeout(timer);
-  }, [cooldown]);
-
-  const maskEmail = (rawEmail: string): string => {
-    if (!rawEmail || !rawEmail.includes('@')) return rawEmail;
-    const [name, domain] = rawEmail.split('@');
-    if (name.length <= 2) return `${name.charAt(0)}••••@${domain}`;
-    return `${name.slice(0, 2)}••••@${domain}`;
-  };
+  }, [isSuccess, router]);
 
   const handleSignup = async () => {
     if (isSubmitting) return;
@@ -52,8 +52,8 @@ export default function AdminSignupPage() {
     const cleanFullName = fullName.trim();
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanFullName) {
-      setErrorMessage('Please enter your full name.');
+    if (!cleanFullName || cleanFullName.length < 2) {
+      setErrorMessage('Please enter your full name (at least 2 characters).');
       return;
     }
     if (!cleanEmail) {
@@ -64,36 +64,33 @@ export default function AdminSignupPage() {
       setErrorMessage('Please enter a valid email address.');
       return;
     }
+    if (!password || password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match. Please verify.');
+      return;
+    }
 
     setIsSubmitting(true);
-    const { error, success } = await sendMagicLink(cleanEmail, cleanFullName);
+    const { error, success } = await registerAdminAccount({
+      fullName: cleanFullName,
+      email: cleanEmail,
+      password: password
+    });
     setIsSubmitting(false);
 
     if (error) {
       setErrorMessage(error);
     } else if (success) {
-      setSubmittedEmail(cleanEmail);
-      setIsSubmitted(true);
-      setCooldown(30);
-    }
-  };
-
-  const handleResend = async () => {
-    if (cooldown > 0 || !submittedEmail || isSubmitting) return;
-    setIsSubmitting(true);
-    setErrorMessage('');
-    const { error } = await sendMagicLink(submittedEmail, fullName.trim());
-    setIsSubmitting(false);
-    if (error) {
-      setErrorMessage(error);
-    } else {
-      setCooldown(30);
+      setIsSuccess(true);
     }
   };
 
   return (
     <AuthPageShell>
-      {!isSubmitted ? (
+      {!isSuccess ? (
         <View style={styles.formContainer}>
           {/* Top Badge */}
           <View style={styles.badgeRow}>
@@ -109,7 +106,7 @@ export default function AdminSignupPage() {
           {/* Heading */}
           <Text style={styles.title}>Create Admin Account</Text>
           <Text style={styles.subtitle}>
-            Enter your details to register. Authorized restaurant staff receive instant, passwordless dashboard access.
+            Set up your secure Dream Love Café & Restaurant management account.
           </Text>
 
           <View style={styles.formContent}>
@@ -118,9 +115,14 @@ export default function AdminSignupPage() {
               <Text style={styles.label}>Full Name</Text>
               <View style={[
                 styles.inputWrapper,
-                focusedField === 'name' && styles.inputWrapperFocused
+                focusedField === 'name' && styles.inputWrapperFocused,
+                Boolean(errorMessage && !fullName.trim()) && styles.inputWrapperError
               ]}>
-                <User size={18} color={focusedField === 'name' ? COLORS.brandTurquoise : COLORS.textSubtle} style={styles.inputIcon} />
+                <User 
+                  size={18} 
+                  color={focusedField === 'name' ? COLORS.brandTurquoise : COLORS.textSubtle} 
+                  style={styles.inputIcon} 
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Rahul Sen"
@@ -145,9 +147,13 @@ export default function AdminSignupPage() {
               <View style={[
                 styles.inputWrapper,
                 focusedField === 'email' && styles.inputWrapperFocused,
-                Boolean(errorMessage) && styles.inputWrapperError
+                Boolean(errorMessage && !email.trim()) && styles.inputWrapperError
               ]}>
-                <Mail size={18} color={focusedField === 'email' ? COLORS.brandTurquoise : COLORS.textSubtle} style={styles.inputIcon} />
+                <Mail 
+                  size={18} 
+                  color={focusedField === 'email' ? COLORS.brandTurquoise : COLORS.textSubtle} 
+                  style={styles.inputIcon} 
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="your.email@example.com"
@@ -164,9 +170,103 @@ export default function AdminSignupPage() {
                   autoComplete="email"
                   inputMode="email"
                   editable={!isSubmitting}
-                  returnKeyType="send"
+                  returnKeyType="next"
+                />
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password (minimum 8 characters)</Text>
+              <View style={[
+                styles.inputWrapper,
+                focusedField === 'password' && styles.inputWrapperFocused,
+                Boolean(errorMessage && password.length < 8) && styles.inputWrapperError
+              ]}>
+                <Lock 
+                  size={18} 
+                  color={focusedField === 'password' ? COLORS.brandTurquoise : COLORS.textSubtle} 
+                  style={styles.inputIcon} 
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor={COLORS.textSubtle}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  editable={!isSubmitting}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} color={COLORS.textSubtle} />
+                  ) : (
+                    <Eye size={18} color={COLORS.textSubtle} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={[
+                styles.inputWrapper,
+                focusedField === 'confirm' && styles.inputWrapperFocused,
+                Boolean(errorMessage && password !== confirmPassword) && styles.inputWrapperError
+              ]}>
+                <Lock 
+                  size={18} 
+                  color={focusedField === 'confirm' ? COLORS.brandTurquoise : COLORS.textSubtle} 
+                  style={styles.inputIcon} 
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor={COLORS.textSubtle}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  onFocus={() => setFocusedField('confirm')}
+                  onBlur={() => setFocusedField(null)}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  editable={!isSubmitting}
+                  returnKeyType="done"
                   onSubmitEditing={handleSignup}
                 />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} color={COLORS.textSubtle} />
+                  ) : (
+                    <Eye size={18} color={COLORS.textSubtle} />
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -184,7 +284,7 @@ export default function AdminSignupPage() {
               disabled={isSubmitting}
               activeOpacity={0.88}
               accessibilityRole="button"
-              accessibilityLabel="Create Account & Send Magic Link"
+              accessibilityLabel="Create Account"
             >
               {isSubmitting ? (
                 <View style={styles.loadingRow}>
@@ -193,18 +293,11 @@ export default function AdminSignupPage() {
                 </View>
               ) : (
                 <View style={styles.btnContentRow}>
-                  <Mail size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.submitBtnText}>Create Account & Send Magic Link</Text>
+                  <Text style={styles.submitBtnText}>Create Account</Text>
+                  <ArrowRight size={17} color="#FFFFFF" style={{ marginLeft: 8 }} />
                 </View>
               )}
             </TouchableOpacity>
-
-            <View style={styles.passwordlessHelper}>
-              <CheckCircle2 size={13} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
-              <Text style={styles.passwordlessHelperText}>
-                Instant access upon email verification. No owner approval delays.
-              </Text>
-            </View>
 
             <View style={styles.divider} />
 
@@ -223,76 +316,40 @@ export default function AdminSignupPage() {
           {/* Security Notice */}
           <View style={styles.securityNotice}>
             <Text style={styles.securityNoticeText}>
-              Dream Love Cafe & Restaurant • Contai, West Bengal
+              Dream Love Café & Restaurant • Contai, West Bengal
             </Text>
             <Text style={styles.securitySubnoticeText}>
-              Access is granted automatically to authorized emails on the restaurant management roster.
+              Registration is verified against the authorized management roster.
             </Text>
           </View>
         </View>
       ) : (
-        /* Sent Confirmation State */
-        <View style={styles.sentContainer}>
-          <View style={styles.mailSentIconBox}>
-            <Mail size={36} color={COLORS.brandTurquoise} />
+        /* Success State */
+        <View style={styles.successContainer}>
+          <View style={styles.successIconBox}>
+            <CheckCircle2 size={40} color={COLORS.brandTurquoise} />
           </View>
 
-          <Text style={styles.sentTitle}>Magic link sent</Text>
-          <Text style={styles.sentSubtext}>
-            We've sent a secure verification link to:
+          <Text style={styles.successTitle}>Account Created Successfully</Text>
+          <Text style={styles.successSubtext}>
+            Your administrator account for <Text style={{ color: COLORS.cream, fontWeight: '600' }}>{email}</Text> has been created.
           </Text>
 
-          <View style={styles.maskedEmailBadge}>
-            <Text style={styles.maskedEmailText}>{maskEmail(submittedEmail)}</Text>
-          </View>
-
           <View style={styles.instructionCard}>
-            <Text style={styles.sentInstructions}>
-              Open your email and click the secure link to verify your identity. You will be automatically authenticated and directed straight to the restaurant management dashboard.
+            <Text style={styles.successInstructions}>
+              You can now sign in immediately using your email and password. Redirecting to login...
             </Text>
           </View>
 
-          {errorMessage ? (
-            <View style={styles.errorBox}>
-              <AlertCircle size={15} color={COLORS.errorLight} style={styles.errorIcon} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
+          <TouchableOpacity 
+            style={styles.submitBtn}
+            onPress={() => router.replace('/admin/login')}
+            activeOpacity={0.88}
+          >
+            <View style={styles.btnContentRow}>
+              <Text style={styles.submitBtnText}>Proceed to Sign In</Text>
+              <ArrowRight size={17} color="#FFFFFF" style={{ marginLeft: 8 }} />
             </View>
-          ) : null}
-
-          {/* Resend Action */}
-          <TouchableOpacity 
-            style={[styles.resendBtn, (cooldown > 0 || isSubmitting) && styles.resendBtnDisabled]}
-            onPress={handleResend}
-            disabled={cooldown > 0 || isSubmitting}
-            activeOpacity={0.85}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={COLORS.cream} />
-            ) : (
-              <View style={styles.btnContentRow}>
-                <RefreshCw 
-                  size={14} 
-                  color={cooldown > 0 ? COLORS.textSubtle : COLORS.cream} 
-                  style={{ marginRight: 8 }} 
-                />
-                <Text style={[styles.resendBtnText, cooldown > 0 && styles.resendBtnTextDisabled]}>
-                  {cooldown > 0 ? `Didn't receive it? Resend (${cooldown}s)` : "Didn't receive it? Resend"}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Use Different Email */}
-          <TouchableOpacity 
-            style={styles.changeEmailBtn}
-            onPress={() => { 
-              setIsSubmitted(false); 
-              setErrorMessage(''); 
-            }}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={14} color={COLORS.copper} style={{ marginRight: 6 }} />
-            <Text style={styles.changeEmailText}>Use a different email</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -391,6 +448,10 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 10,
   },
+  eyeBtn: {
+    padding: 6,
+    marginLeft: 6,
+  },
   input: {
     flex: 1,
     color: COLORS.cream,
@@ -428,12 +489,13 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: 6,
     shadowColor: COLORS.dreamPink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
+    width: '100%',
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
       transition: 'transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease',
@@ -459,16 +521,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.4,
   },
-  passwordlessHelper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.md,
-  },
-  passwordlessHelperText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
   divider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -477,7 +529,8 @@ const styles = StyleSheet.create({
   },
   linkBtn: {
     alignItems: 'center',
-    paddingVertical: 6,
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
   linkText: {
     color: COLORS.textMuted,
@@ -507,13 +560,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ── Sent State ────────────────────────────────────────────────────────────
-  sentContainer: {
+  // ── Success State ─────────────────────────────────────────────────────────
+  successContainer: {
     width: '100%',
     alignItems: 'center',
     paddingVertical: SPACING.sm,
   },
-  mailSentIconBox: {
+  successIconBox: {
     width: 68,
     height: 68,
     borderRadius: 34,
@@ -524,34 +577,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(45, 212, 191, 0.3)',
   },
-  sentTitle: {
+  successTitle: {
     fontFamily: TYPOGRAPHY.fontFamilyDisplay,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '600',
     color: COLORS.cream,
-    marginBottom: 6,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  sentSubtext: {
+  successSubtext: {
     fontSize: 13.5,
     color: COLORS.textMuted,
     textAlign: 'center',
-    marginBottom: 10,
-  },
-  maskedEmailBadge: {
-    backgroundColor: 'rgba(45, 212, 191, 0.08)',
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.30)',
-    marginBottom: SPACING.md,
-  },
-  maskedEmailText: {
-    color: COLORS.brandTurquoise,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    marginBottom: SPACING.lg,
+    lineHeight: 20,
   },
   instructionCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
@@ -562,44 +601,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     width: '100%',
   },
-  sentInstructions: {
+  successInstructions: {
     color: COLORS.creamMuted,
-    fontSize: 12.5,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  resendBtn: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: BORDER_RADIUS.md,
-    width: '100%',
-    marginBottom: SPACING.md,
-  },
-  resendBtnDisabled: {
-    opacity: 0.55,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  resendBtnText: {
-    color: COLORS.cream,
-    fontSize: 13.5,
-    fontWeight: '600',
-  },
-  resendBtnTextDisabled: {
-    color: COLORS.textSubtle,
-  },
-  changeEmailBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  changeEmailText: {
-    color: COLORS.copper,
     fontSize: 13,
-    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
