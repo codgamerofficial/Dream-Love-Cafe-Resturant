@@ -74,7 +74,7 @@ export default function AdminSignupPage() {
     }
 
     setIsSubmitting(true);
-    const { error, success } = await registerAdminAccount({
+    const { error, success, sessionEstablished } = await registerAdminAccount({
       fullName: cleanFullName,
       email: cleanEmail,
       password: password
@@ -84,7 +84,11 @@ export default function AdminSignupPage() {
     if (error) {
       setErrorMessage(error);
     } else if (success) {
-      setIsSuccess(true);
+      if (sessionEstablished) {
+        router.replace('/admin/dashboard');
+      } else {
+        setIsSuccess(true);
+      }
     }
   };
 
@@ -308,7 +312,7 @@ export default function AdminSignupPage() {
               activeOpacity={0.7}
             >
               <Text style={styles.linkText}>
-                Already registered? <Text style={styles.linkHighlight}>Sign In Here</Text>
+                Already have an account? <Text style={styles.linkHighlight}>Sign In</Text>
               </Text>
             </TouchableOpacity>
           </View>

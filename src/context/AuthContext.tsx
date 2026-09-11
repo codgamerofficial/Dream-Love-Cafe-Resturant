@@ -28,7 +28,7 @@ interface AuthContextType {
   status: UserStatus | null;
   role: UserRole | null;
   loginWithPassword: (email: string, pass: string) => Promise<{ error: string | null; success: boolean; authorized?: boolean }>;
-  registerAdminAccount: (data: { fullName: string; email: string; password: string }) => Promise<{ error: string | null; success?: boolean }>;
+  registerAdminAccount: (data: { fullName: string; email: string; password: string }) => Promise<{ error: string | null; success?: boolean; sessionEstablished?: boolean }>;
   sendPasswordReset: (email: string) => Promise<{ error: string | null; success?: boolean }>;
   updateUserPassword: (newPassword: string) => Promise<{ error: string | null; success?: boolean }>;
   logout: () => Promise<{ success: boolean; error?: string }>;
@@ -248,11 +248,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         if (
+          error.message?.includes('Email not confirmed') ||
+          (error as any)?.code === 'email_not_confirmed'
+        ) {
+          return { 
+            error: 'Your account email has not been confirmed yet. Please disable "Confirm email" in Supabase Dashboard (Authentication -> Providers -> Email) or run the SQL script to activate instant login.', 
+            success: false 
+          };
+        }
+        if (
           error.message?.includes('Invalid login credentials') ||
           error.message?.includes('invalid_grant') ||
           error.message?.includes('credentials')
         ) {
-          return { error: 'Invalid email or password.', success: false };
+          return { 
+            error: 'Invalid email or password. Please verify your credentials or use "Forgot Password?" to reset.', 
+            success: false 
+          };
         }
         if (
           error.name === 'AuthRetryableFetchError' ||
@@ -303,7 +315,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fullName: string;
     email: string;
     password: string;
-  }): Promise<{ error: string | null; success?: boolean }> => {
+  }): Promise<{ error: string | null; success?: boolean; sessionEstablished?: boolean }> => {
     const cleanFullName = data.fullName.trim();
     const cleanEmail = data.email.trim().toLowerCase();
     const password = data.password;
@@ -342,15 +354,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (signUpErr) {
         if (
+          signUpErr.message?.includes('rate limit') ||
+          (signUpErr as any)?.code === 'over_email_send_rate_limit' ||
+          signUpErr.status === 429
+        ) {
+          return { 
+            error: 'Supabase email rate limit reached. Please disable "Confirm email" in Supabase Dashboard (Authentication -> Providers -> Email) or run the SQL script to activate accounts without email verification.',
+            success: false 
+          };
+        }
+        if (
           signUpErr.message?.includes('User already registered') ||
           signUpErr.message?.includes('already exists')
         ) {
-          return { error: 'An account already exists with this email.' };
+          return { error: 'An account already exists with this email. Please sign in or click "Forgot Password?".' };
         }
         if (signUpErr.message?.includes('Password should be at least')) {
           return { error: 'Password must be at least 8 characters long.' };
         }
         return { error: signUpErr.message || "We couldn't create your account. Please try again." };
+      }
+
+      // Supabase anti-enumeration detection: if identities is empty array, user already exists!
+      if (signUpData.user && Array.isArray(signUpData.user.identities) && signUpData.user.identities.length === 0) {
+        return { 
+          error: 'An account with this email already exists in the system. Please sign in with your password, or click "Forgot Password?" to reset your password.',
+          success: false 
+        };
       }
 
       if (signUpData.user) {
@@ -365,6 +395,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, { onConflict: 'auth_user_id' });
         } catch (dbErr) {
           console.warn('Profile creation notice:', dbErr);
+        }
+
+        // If email confirmation is disabled in Supabase, an active session is returned immediately
+        if (signUpData.session) {
+          setUser(signUpData.user);
+          const p = await fetchOrCreateProfile(signUpData.user);
+          setProfile(p);
+          setIsAuthorized(true);
+          return { error: null, success: true, sessionEstablished: true };
         }
       }
 

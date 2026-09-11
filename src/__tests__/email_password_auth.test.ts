@@ -58,6 +58,9 @@ describe('Email + Password Authentication & Server Authorization Suite', () => {
 
       const result = await checkEmailAuthorizedServer('dreamlovecontai@gmail.com');
       expect(result.authorized).toBe(true);
+
+      const ownerResult = await checkEmailAuthorizedServer('codgamerofficial07@gmail.com');
+      expect(ownerResult.authorized).toBe(true);
     });
 
     test('checkEmailAuthorizedServer returns authorized: false for unauthorized email', async () => {

@@ -212,7 +212,7 @@ export default function AdminLoginPage() {
             activeOpacity={0.8}
           >
             <UserPlus size={15} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
-            <Text style={styles.createAccountBtnText}>Create Admin / Staff Account</Text>
+            <Text style={styles.createAccountBtnText}>Create Account</Text>
           </TouchableOpacity>
         </View>
 
