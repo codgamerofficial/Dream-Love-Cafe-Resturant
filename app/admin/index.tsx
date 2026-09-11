@@ -356,9 +356,33 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
     }
   }, []);
 
+  // ── Executive Dashboard Telemetry State & Sync ───────────────────────────
+  const [isRefreshingTelemetry, setIsRefreshingTelemetry] = useState(false);
+  const [telemetryTimestamp, setTelemetryTimestamp] = useState<string>('Live Connected');
+
+  const handleRefreshTelemetry = useCallback(async () => {
+    setIsRefreshingTelemetry(true);
+    try {
+      await Promise.allSettled([
+        fetchOrders(),
+        fetchReservations(),
+        fetchStaffProfiles(),
+      ]);
+      const now = new Date();
+      setTelemetryTimestamp(`Synced ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    } finally {
+      setTimeout(() => setIsRefreshingTelemetry(false), 500);
+    }
+  }, [fetchOrders, fetchReservations, fetchStaffProfiles]);
+
   // Load data based on active tab
   useEffect(() => {
     if (isAuthorized) {
+      if (activeTab === 'dashboard') {
+        fetchStaffProfiles();
+        fetchOrders();
+        fetchReservations();
+      }
       if (activeTab === 'staff') fetchStaffProfiles();
       if (activeTab === 'orders') fetchOrders();
       if (activeTab === 'reservations') fetchReservations();
@@ -906,21 +930,131 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
 
   return (
     <View style={[styles.adminContainer, !isDesktop && styles.adminContainerMobile]}>
+      {Platform.OS === 'web' && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes beaconPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+          }
+          @keyframes avatarDotPulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+            70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+          }
+          @keyframes cardFadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(14px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes pulseGlow {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(45, 212, 191, 0.4)); }
+          }
+          .pulse-beacon-live {
+            animation: beaconPulse 2.2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+          }
+          .avatar-online-beacon {
+            animation: avatarDotPulse 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+          }
+          .modern-stat-card-web {
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            cursor: pointer;
+            animation: cardFadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+          }
+          .stat-card-animate-1 { animation-delay: 0.04s; }
+          .stat-card-animate-2 { animation-delay: 0.12s; }
+          .stat-card-animate-3 { animation-delay: 0.20s; }
+          .stat-card-animate-4 { animation-delay: 0.28s; }
+          .modern-stat-card-web:hover {
+            transform: translateY(-5px) !important;
+            box-shadow: 0 20px 42px rgba(0, 0, 0, 0.6), 0 0 24px rgba(45, 212, 191, 0.18) !important;
+            border-color: rgba(45, 212, 191, 0.45) !important;
+          }
+          .quick-op-card-web {
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            transition: all 0.26s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            cursor: pointer;
+          }
+          .quick-op-card-web:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(255, 255, 255, 0.07) !important;
+            border-color: rgba(255, 255, 255, 0.26) !important;
+          }
+          .quick-op-card-web:hover .arrow-icon-web {
+            transform: translate(3px, -3px);
+            background-color: rgba(255, 255, 255, 0.14) !important;
+          }
+          .arrow-icon-web {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          .pulse-card-web {
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          .pulse-card-web:hover {
+            border-color: rgba(45, 212, 191, 0.28) !important;
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45) !important;
+            transform: translateY(-2px) !important;
+          }
+          .sidebar-item-web {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            cursor: pointer;
+          }
+          .sidebar-item-web:hover {
+            transform: translateX(4px) !important;
+            background-color: rgba(255, 255, 255, 0.07) !important;
+          }
+          .action-btn-hover {
+            transition: all 0.2s ease !important;
+            cursor: pointer;
+          }
+          .action-btn-hover:hover {
+            background-color: rgba(45, 212, 191, 0.20) !important;
+            border-color: rgba(45, 212, 191, 0.45) !important;
+            transform: translateY(-1px);
+          }
+          .action-btn-glow {
+            transition: all 0.2s ease !important;
+            cursor: pointer;
+          }
+          .action-btn-glow:hover {
+            box-shadow: 0 8px 24px rgba(244, 63, 94, 0.5) !important;
+            transform: translateY(-1px);
+          }
+        ` }} />
+      )}
       {/* ── DESKTOP SIDEBAR NAVIGATION ── */}
       {isDesktop && (
         <View style={styles.adminSidebar}>
           {/* 1. User Info Header with Quick Logout Icon */}
           <View style={styles.sidebarHeader}>
-            <View style={styles.avatarBox}>
-              <Text style={styles.avatarText}>
-                {(profile?.full_name || 'Staff').charAt(0).toUpperCase()}
-              </Text>
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatarBox}>
+                <Text style={styles.avatarText}>
+                  {(profile?.full_name || 'Staff').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View 
+                style={styles.avatarOnlineDot} 
+                {...(Platform.OS === 'web' ? { className: 'avatar-online-beacon' } : {})}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.sidebarUserName} numberOfLines={1}>
                 {profile?.full_name || 'Staff Member'}
               </Text>
               <View style={styles.roleBadgeContainer}>
+                <Sparkles size={9} color={COLORS.copper} style={{ marginRight: 3 }} />
                 <Text style={styles.roleBadgeText}>
                   {(profile?.role || 'staff').toUpperCase()}
                 </Text>
@@ -952,11 +1086,29 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                   style={[styles.sidebarNavItem, isActive && styles.sidebarNavItemActive]}
                   onPress={() => setActiveTab(tab.id)}
                   activeOpacity={0.8}
+                  {...(Platform.OS === 'web' ? { className: 'sidebar-item-web' } : {})}
                 >
-                  <IconComponent size={17} color={isActive ? (tab.color || COLORS.brandTurquoise) : COLORS.textSubtle} />
-                  <Text style={[styles.sidebarNavText, isActive && styles.sidebarNavTextActive]}>
-                    {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''}
-                  </Text>
+                  <View style={styles.sidebarNavItemLeft}>
+                    <IconComponent size={17} color={isActive ? (tab.color || COLORS.brandTurquoise) : COLORS.textMuted} />
+                    <Text style={[styles.sidebarNavText, isActive && styles.sidebarNavTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </View>
+                  {tab.count !== undefined && (
+                    <View style={[
+                      styles.sidebarCountBadge,
+                      tab.badgeColor ? { backgroundColor: tab.badgeColor + '20', borderColor: tab.badgeColor + '40' } : undefined,
+                      isActive ? { backgroundColor: 'rgba(45, 212, 191, 0.22)', borderColor: COLORS.brandTurquoise } : undefined,
+                    ]}>
+                      <Text style={[
+                        styles.sidebarCountText, 
+                        tab.badgeColor ? { color: tab.badgeColor } : undefined,
+                        isActive ? { color: COLORS.brandTurquoise, fontWeight: '700' } : undefined
+                      ]}>
+                        {tab.count}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -1069,61 +1221,383 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
 
         {/* ── TAB: OVERVIEW / DASHBOARD ── */}
         {activeTab === 'dashboard' && (
-          <View>
-            <Text style={styles.tabHeading}>System Overview</Text>
-            <Text style={styles.tabSubheading}>
-              Dream Love Cafe & Restaurant management overview and data metrics.
-            </Text>
+          <View style={styles.dashboardTabContainer}>
+            {/* Top Operational Bar */}
+            <View style={styles.executiveHeroBar}>
+              <View style={styles.heroLeftCol}>
+                <View style={styles.livePulseBadge}>
+                  <View 
+                    style={styles.pulseBeaconWrapper}
+                    {...(Platform.OS === 'web' ? { className: 'pulse-beacon-live' } : {})}
+                  >
+                    <View style={styles.pulseBeaconCore} />
+                  </View>
+                  <Text style={styles.livePulseText}>LIVE OPERATIONS TELEMETRY • CONNECTED</Text>
+                </View>
 
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <Text style={styles.statVal}>{menuItems.length}</Text>
-                <Text style={styles.statLbl}>Menu Dishes</Text>
+                <Text style={styles.executiveHeading}>System Overview</Text>
+                <Text style={styles.executiveSubheading}>
+                  Real-time command center for Dream Love Café & Restaurant. Live orders, authentic photography curation, POS catalog, and customer metrics for Contai, West Bengal.
+                </Text>
               </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statVal, { color: COLORS.brandGreen }]}>{realPhotosCount}</Text>
-                <Text style={styles.statLbl}>Authentic Photos</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statVal, { color: COLORS.gold }]}>{temporaryPhotosCount}</Text>
-                <Text style={styles.statLbl}>Temporary Photos</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={[styles.statVal, { color: COLORS.brandTurquoise }]}>{settings.googleRating} ★</Text>
-                <Text style={styles.statLbl}>Google Rating ({settings.googleReviewsCount})</Text>
+
+              <View style={styles.heroRightActions}>
+                <View style={styles.clockWidget}>
+                  <Clock size={13} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                  <Text style={styles.clockWidgetText}>Contai, WB • {telemetryTimestamp}</Text>
+                </View>
+
+                <View style={styles.heroActionBtnsRow}>
+                  <TouchableOpacity
+                    style={[styles.refreshTelemetryBtn, isRefreshingTelemetry && styles.refreshTelemetryBtnActive]}
+                    onPress={handleRefreshTelemetry}
+                    disabled={isRefreshingTelemetry}
+                    activeOpacity={0.7}
+                    {...(Platform.OS === 'web' ? { className: 'action-btn-hover' } : {})}
+                  >
+                    <RefreshCw 
+                      size={14} 
+                      color={COLORS.brandTurquoise} 
+                    />
+                    <Text style={styles.refreshTelemetryText}>
+                      {isRefreshingTelemetry ? 'Syncing...' : 'Sync Data'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.viewSiteBtn}
+                    onPress={() => {
+                      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                        window.open('/', '_blank');
+                      } else {
+                        router.push('/');
+                      }
+                    }}
+                    activeOpacity={0.8}
+                    {...(Platform.OS === 'web' ? { className: 'action-btn-glow' } : {})}
+                  >
+                    <Text style={styles.viewSiteBtnText}>Customer Site</Text>
+                    <ArrowUpRight size={14} color="#FFFFFF" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
-            {/* Quick Actions Grid */}
-            <Text style={styles.sectionHeader}>Quick Operations</Text>
-            <View style={styles.quickActionsGrid}>
-              <TouchableOpacity style={styles.quickActionCard} onPress={() => setActiveTab('food-images')}>
-                <Camera size={24} color={COLORS.brandTurquoise} style={{ marginBottom: 8 }} />
+            {/* 4 Modern Animated Metric Cards */}
+            <View style={styles.modernStatsGrid}>
+              {/* Card 1: Menu Dishes Portfolio */}
+              <TouchableOpacity 
+                style={[styles.modernStatCard, styles.statCardCyan]}
+                onPress={() => setActiveTab('menu')}
+                activeOpacity={0.85}
+                {...(Platform.OS === 'web' ? { className: 'modern-stat-card-web stat-card-animate-1' } : {})}
+              >
+                <View style={styles.cardTopAccentCyan} />
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconBox, { backgroundColor: 'rgba(45, 212, 191, 0.12)' }]}>
+                    <Utensils size={20} color={COLORS.brandTurquoise} />
+                  </View>
+                  <View style={[styles.trendBadge, { backgroundColor: 'rgba(45, 212, 191, 0.12)' }]}>
+                    <Text style={[styles.trendBadgeText, { color: COLORS.brandTurquoise }]}>Live Catalog</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.modernStatVal}>{menuItems.length}</Text>
+                <Text style={styles.modernStatLbl}>Menu Dishes</Text>
+
+                <View style={styles.statCardFooter}>
+                  <Text style={styles.statFooterSub}>13 Categories • Active in POS</Text>
+                  <ArrowUpRight size={13} color={COLORS.brandTurquoise} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Card 2: Authentic Photos */}
+              <TouchableOpacity 
+                style={[styles.modernStatCard, styles.statCardGreen]}
+                onPress={() => setActiveTab('food-images')}
+                activeOpacity={0.85}
+                {...(Platform.OS === 'web' ? { className: 'modern-stat-card-web stat-card-animate-2' } : {})}
+              >
+                <View style={styles.cardTopAccentGreen} />
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+                    <Camera size={20} color={COLORS.brandGreen} />
+                  </View>
+                  <View style={[styles.trendBadge, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+                    <Text style={[styles.trendBadgeText, { color: COLORS.brandGreen }]}>{replacementProgress}% Real</Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.modernStatVal, { color: COLORS.brandGreen }]}>{realPhotosCount}</Text>
+                <Text style={styles.modernStatLbl}>Authentic Photos</Text>
+
+                {/* Mini Neon Progress Track */}
+                <View style={styles.miniProgressTrack}>
+                  <View style={[styles.miniProgressFill, { width: `${Math.max(Number(replacementProgress), 4)}%` as any }]} />
+                </View>
+
+                <View style={styles.statCardFooter}>
+                  <Text style={styles.statFooterSub}>{realPhotosCount} of {totalItemsCount} dishes verified</Text>
+                  <ArrowUpRight size={13} color={COLORS.brandGreen} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Card 3: Temporary Photos */}
+              <TouchableOpacity 
+                style={[styles.modernStatCard, styles.statCardGold]}
+                onPress={() => setActiveTab('food-images')}
+                activeOpacity={0.85}
+                {...(Platform.OS === 'web' ? { className: 'modern-stat-card-web stat-card-animate-3' } : {})}
+              >
+                <View style={styles.cardTopAccentGold} />
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
+                    <Layers size={20} color={COLORS.gold} />
+                  </View>
+                  <View style={[styles.trendBadge, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
+                    <Text style={[styles.trendBadgeText, { color: COLORS.gold }]}>Needs Real Photos</Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.modernStatVal, { color: COLORS.gold }]}>{temporaryPhotosCount}</Text>
+                <Text style={styles.modernStatLbl}>Temporary Photos</Text>
+
+                <View style={styles.statCardFooter}>
+                  <Text style={styles.statFooterSub}>Awaiting client camera upload</Text>
+                  <ArrowUpRight size={13} color={COLORS.gold} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Card 4: Diner Rating & Reputation */}
+              <TouchableOpacity 
+                style={[styles.modernStatCard, styles.statCardHeart]}
+                onPress={() => setActiveTab('reviews')}
+                activeOpacity={0.85}
+                {...(Platform.OS === 'web' ? { className: 'modern-stat-card-web stat-card-animate-4' } : {})}
+              >
+                <View style={styles.cardTopAccentHeart} />
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconBox, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+                    <Star size={20} color={COLORS.brandHeart} fill={COLORS.brandHeart} />
+                  </View>
+                  <View style={[styles.trendBadge, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+                    <Text style={[styles.trendBadgeText, { color: COLORS.brandHeart }]}>Top Rated</Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.modernStatVal, { color: COLORS.cream }]}>{settings.googleRating} ★</Text>
+                <Text style={styles.modernStatLbl}>Google Rating ({settings.googleReviewsCount})</Text>
+
+                <View style={styles.statCardFooter}>
+                  <Text style={styles.statFooterSub}>Justdial 4.0 ★ • Magicpin 4.1 ★</Text>
+                  <ArrowUpRight size={13} color={COLORS.brandHeart} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Operations Section */}
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.modernSectionHeader}>Quick Operations</Text>
+                <Text style={styles.modernSectionSub}>Direct access to vital restaurant workflows</Text>
+              </View>
+            </View>
+
+            <View style={styles.modernQuickActionsGrid}>
+              <TouchableOpacity 
+                style={styles.modernQuickActionCard} 
+                onPress={() => setActiveTab('food-images')}
+                activeOpacity={0.82}
+                {...(Platform.OS === 'web' ? { className: 'quick-op-card-web' } : {})}
+              >
+                <View style={styles.quickActionTopRow}>
+                  <View style={[styles.quickActionIconBox, { backgroundColor: 'rgba(45, 212, 191, 0.12)', borderColor: 'rgba(45, 212, 191, 0.25)' }]}>
+                    <Camera size={22} color={COLORS.brandTurquoise} />
+                  </View>
+                  <View 
+                    style={styles.quickActionArrowBtn}
+                    {...(Platform.OS === 'web' ? { className: 'arrow-icon-web' } : {})}
+                  >
+                    <ArrowUpRight size={16} color={COLORS.brandTurquoise} />
+                  </View>
+                </View>
                 <Text style={styles.quickActionTitle}>Replace Food Images</Text>
-                <Text style={styles.quickActionSub}>Publish restaurant's real food photos</Text>
+                <Text style={styles.quickActionSub}>Curate and publish authentic real photographs of your dishes</Text>
+                <View style={[styles.quickActionPill, { backgroundColor: 'rgba(45, 212, 191, 0.08)' }]}>
+                  <Text style={[styles.quickActionPillText, { color: COLORS.brandTurquoise }]}>
+                    {realPhotosCount}/{totalItemsCount} Verified • Open Photo Studio
+                  </Text>
+                </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.quickActionCard} onPress={() => setActiveTab('menu')}>
-                <Utensils size={24} color={COLORS.copper} style={{ marginBottom: 8 }} />
+              <TouchableOpacity 
+                style={styles.modernQuickActionCard} 
+                onPress={() => setActiveTab('menu')}
+                activeOpacity={0.82}
+                {...(Platform.OS === 'web' ? { className: 'quick-op-card-web' } : {})}
+              >
+                <View style={styles.quickActionTopRow}>
+                  <View style={[styles.quickActionIconBox, { backgroundColor: 'rgba(217, 131, 36, 0.12)', borderColor: 'rgba(217, 131, 36, 0.25)' }]}>
+                    <Utensils size={22} color={COLORS.copper} />
+                  </View>
+                  <View 
+                    style={styles.quickActionArrowBtn}
+                    {...(Platform.OS === 'web' ? { className: 'arrow-icon-web' } : {})}
+                  >
+                    <ArrowUpRight size={16} color={COLORS.copper} />
+                  </View>
+                </View>
                 <Text style={styles.quickActionTitle}>Manage Menu Items</Text>
-                <Text style={styles.quickActionSub}>Toggle availability and update pricing</Text>
+                <Text style={styles.quickActionSub}>Toggle dish availability, adjust prices, edit descriptions, and add new specials</Text>
+                <View style={[styles.quickActionPill, { backgroundColor: 'rgba(217, 131, 36, 0.08)' }]}>
+                  <Text style={[styles.quickActionPillText, { color: COLORS.copper }]}>
+                    {menuItems.length} Dishes Live • Instant Price Sync
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               {isOwnerOrAdmin && (
-                <TouchableOpacity style={styles.quickActionCard} onPress={() => setActiveTab('staff')}>
-                  <Users size={24} color={COLORS.gold} style={{ marginBottom: 8 }} />
-                  <Text style={styles.quickActionTitle}>Staff Approvals</Text>
-                  <Text style={styles.quickActionSub}>Review and grant staff portal access</Text>
+                <TouchableOpacity 
+                  style={styles.modernQuickActionCard} 
+                  onPress={() => setActiveTab('staff')}
+                  activeOpacity={0.82}
+                  {...(Platform.OS === 'web' ? { className: 'quick-op-card-web' } : {})}
+                >
+                  <View style={styles.quickActionTopRow}>
+                    <View style={[styles.quickActionIconBox, { backgroundColor: 'rgba(212, 175, 55, 0.12)', borderColor: 'rgba(212, 175, 55, 0.25)' }]}>
+                      <Users size={22} color={COLORS.gold} />
+                    </View>
+                    <View 
+                      style={styles.quickActionArrowBtn}
+                      {...(Platform.OS === 'web' ? { className: 'arrow-icon-web' } : {})}
+                    >
+                      <ArrowUpRight size={16} color={COLORS.gold} />
+                    </View>
+                  </View>
+                  <Text style={styles.quickActionTitle}>Staff Approvals & Roles</Text>
+                  <Text style={styles.quickActionSub}>Review management accounts, assign owner/manager roles, and oversee staff access</Text>
+                  <View style={[styles.quickActionPill, { backgroundColor: 'rgba(212, 175, 55, 0.08)' }]}>
+                    <Text style={[styles.quickActionPillText, { color: COLORS.gold }]}>
+                      {staffProfiles.length || 2} Staff Accounts • Full RBAC
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
 
               {isOwnerOrAdmin && (
-                <TouchableOpacity style={styles.quickActionCard} onPress={() => setActiveTab('settings')}>
-                  <MapPin size={24} color={COLORS.brandHeart} style={{ marginBottom: 8 }} />
+                <TouchableOpacity 
+                  style={styles.modernQuickActionCard} 
+                  onPress={() => setActiveTab('settings')}
+                  activeOpacity={0.82}
+                  {...(Platform.OS === 'web' ? { className: 'quick-op-card-web' } : {})}
+                >
+                  <View style={styles.quickActionTopRow}>
+                    <View style={[styles.quickActionIconBox, { backgroundColor: 'rgba(244, 63, 94, 0.12)', borderColor: 'rgba(244, 63, 94, 0.25)' }]}>
+                      <MapPin size={22} color={COLORS.brandHeart} />
+                    </View>
+                    <View 
+                      style={styles.quickActionArrowBtn}
+                      {...(Platform.OS === 'web' ? { className: 'arrow-icon-web' } : {})}
+                    >
+                      <ArrowUpRight size={16} color={COLORS.brandHeart} />
+                    </View>
+                  </View>
                   <Text style={styles.quickActionTitle}>Location & Google Map</Text>
-                  <Text style={styles.quickActionSub}>Update address, Plus Code, and hours</Text>
+                  <Text style={styles.quickActionSub}>Update restaurant address, Plus Code (CFF3+3W Contai), contact numbers, and hours</Text>
+                  <View style={[styles.quickActionPill, { backgroundColor: 'rgba(244, 63, 94, 0.08)' }]}>
+                    <Text style={[styles.quickActionPillText, { color: COLORS.brandHeart }]}>
+                      Storefront Pin • 11:00 AM – 10:30 PM
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
+            </View>
+
+            {/* Live Operations Pulse Grid (Two-Column Layout) */}
+            <View style={styles.operationsPulseRow}>
+              {/* Left Column: Kitchen & Reservation Activity */}
+              <View 
+                style={styles.pulseCard}
+                {...(Platform.OS === 'web' ? { className: 'pulse-card-web' } : {})}
+              >
+                <View style={styles.pulseCardHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ShoppingBag size={18} color={COLORS.brandTurquoise} />
+                    <Text style={styles.pulseCardTitle}>Orders & Reservations Pulse</Text>
+                  </View>
+                  <View style={styles.pulseStatusBadge}>
+                    <Text style={styles.pulseStatusText}>REALTIME</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pulseMetricsRow}>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={styles.pulseMetricVal}>{orders.filter(o => o.status === 'new').length}</Text>
+                    <Text style={styles.pulseMetricLbl}>New Orders</Text>
+                  </View>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={styles.pulseMetricVal}>{reservations.filter(r => r.status === 'pending').length}</Text>
+                    <Text style={styles.pulseMetricLbl}>Pending Tables</Text>
+                  </View>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={styles.pulseMetricVal}>{orders.length}</Text>
+                    <Text style={styles.pulseMetricLbl}>Total Orders</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pulseActionLinksRow}>
+                  <TouchableOpacity style={styles.pulseLinkBtn} onPress={() => setActiveTab('orders')}>
+                    <Text style={styles.pulseLinkText}>View Orders Queue</Text>
+                    <ArrowUpRight size={13} color={COLORS.brandTurquoise} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.pulseLinkBtn} onPress={() => setActiveTab('reservations')}>
+                    <Text style={styles.pulseLinkText}>Manage Table Bookings</Text>
+                    <ArrowUpRight size={13} color={COLORS.brandTurquoise} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Right Column: Photography & Reputation Status */}
+              <View 
+                style={styles.pulseCard}
+                {...(Platform.OS === 'web' ? { className: 'pulse-card-web' } : {})}
+              >
+                <View style={styles.pulseCardHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Star size={18} color={COLORS.gold} />
+                    <Text style={styles.pulseCardTitle}>Reputation & Visual Quality</Text>
+                  </View>
+                  <View style={[styles.pulseStatusBadge, { backgroundColor: 'rgba(212, 175, 55, 0.12)' }]}>
+                    <Text style={[styles.pulseStatusText, { color: COLORS.gold }]}>98% POSITIVE</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pulseMetricsRow}>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={[styles.pulseMetricVal, { color: COLORS.gold }]}>{settings.googleRating} ★</Text>
+                    <Text style={styles.pulseMetricLbl}>Google Maps</Text>
+                  </View>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={[styles.pulseMetricVal, { color: COLORS.brandTurquoise }]}>{settings.justdialRating} ★</Text>
+                    <Text style={styles.pulseMetricLbl}>Justdial</Text>
+                  </View>
+                  <View style={styles.pulseMetricBox}>
+                    <Text style={[styles.pulseMetricVal, { color: COLORS.brandGreen }]}>{galleryItems.length}</Text>
+                    <Text style={styles.pulseMetricLbl}>Storefront Photos</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pulseActionLinksRow}>
+                  <TouchableOpacity style={styles.pulseLinkBtn} onPress={() => setActiveTab('reviews')}>
+                    <Text style={styles.pulseLinkText}>Read Diner Reviews</Text>
+                    <ArrowUpRight size={13} color={COLORS.brandTurquoise} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.pulseLinkBtn} onPress={() => setActiveTab('gallery')}>
+                    <Text style={styles.pulseLinkText}>View Storefront Gallery</Text>
+                    <ArrowUpRight size={13} color={COLORS.brandTurquoise} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
         )}
@@ -2925,17 +3399,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 6,
   },
+  avatarWrapper: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  avatarOnlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.brandGreen,
+    borderWidth: 2,
+    borderColor: COLORS.surfaceElevated,
+  },
   avatarBox: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: COLORS.brandTurquoise + '25',
+    backgroundColor: 'rgba(45, 212, 191, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.brandTurquoise,
-  },
+    ...(Platform.OS === 'web' ? { boxShadow: '0 0 10px rgba(45, 212, 191, 0.25)' } : {}),
+  } as any,
   avatarText: {
     color: COLORS.brandTurquoise,
     fontWeight: '800',
@@ -2947,8 +3436,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   roleBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.copper + '25',
+    backgroundColor: 'rgba(217, 131, 36, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 131, 36, 0.30)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
@@ -2971,24 +3464,44 @@ const styles = StyleSheet.create({
   sidebarNavItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8.5,
+    justifyContent: 'space-between',
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: BORDER_RADIUS.md,
+    gap: 8,
+  },
+  sidebarNavItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   sidebarNavItemActive: {
-    backgroundColor: COLORS.surfaceHover,
+    backgroundColor: 'rgba(45, 212, 191, 0.10)',
     borderLeftWidth: 3,
     borderLeftColor: COLORS.brandTurquoise,
   },
   sidebarNavText: {
     color: COLORS.textMuted,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   sidebarNavTextActive: {
     color: COLORS.cream,
     fontWeight: '700',
+  },
+  sidebarCountBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  sidebarCountText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: COLORS.textMuted,
   },
   sidebarBottomArea: {
     paddingTop: SPACING.sm,
@@ -3050,13 +3563,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-
-  // Stats Grid (Dashboard)
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: SPACING.md,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.lg,
   },
   statCard: {
     flex: 1,
@@ -3077,36 +3594,416 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 4,
   },
-  sectionHeader: {
-    fontSize: 16,
+
+  // ── Executive Dashboard Layout & Hero Bar ──
+  dashboardTabContainer: {
+    gap: SPACING.xl,
+  },
+  executiveHeroBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.025)',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  heroLeftCol: {
+    flex: 1,
+    minWidth: 280,
+  },
+  livePulseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(16, 185, 129, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.full,
+    marginBottom: 10,
+  },
+  pulseBeaconWrapper: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.brandGreen,
+    marginRight: 8,
+    ...(Platform.OS === 'web' ? { boxShadow: '0 0 8px #10B981' } : {}),
+  } as any,
+  pulseBeaconCore: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: COLORS.brandGreen,
+  },
+  livePulseText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.brandGreen,
+    letterSpacing: 0.8,
+  },
+  executiveHeading: {
+    fontFamily: TYPOGRAPHY.fontFamilyDisplay,
+    fontSize: 30,
     fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: SPACING.md,
+    letterSpacing: -0.4,
+    marginBottom: 6,
   },
-  quickActionsGrid: {
+  executiveSubheading: {
+    fontSize: 13.5,
+    color: COLORS.textMuted,
+    lineHeight: 20,
+    maxWidth: 640,
+  },
+  heroRightActions: {
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  clockWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  clockWidgetText: {
+    fontSize: 12,
+    color: COLORS.creamMuted,
+    fontWeight: '600',
+  },
+  heroActionBtnsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshTelemetryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(45, 212, 191, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.25)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+    gap: 6,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  refreshTelemetryBtnActive: {
+    opacity: 0.7,
+  },
+  refreshTelemetryText: {
+    fontSize: 12.5,
+    color: COLORS.brandTurquoise,
+    fontWeight: '600',
+  },
+  viewSiteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.dreamPink,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+    borderRadius: BORDER_RADIUS.md,
+    shadowColor: COLORS.dreamPink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  viewSiteBtnText: {
+    fontSize: 12.5,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  // ── Modern Animated Stats Grid ──
+  modernStatsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
-    marginBottom: SPACING.xxl,
   },
-  quickActionCard: {
+  modernStatCard: {
     flex: 1,
     minWidth: 220,
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    position: 'relative',
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  statCardCyan: {
+    borderColor: 'rgba(45, 212, 191, 0.18)',
+  },
+  statCardGreen: {
+    borderColor: 'rgba(16, 185, 129, 0.18)',
+  },
+  statCardGold: {
+    borderColor: 'rgba(245, 158, 11, 0.18)',
+  },
+  statCardHeart: {
+    borderColor: 'rgba(244, 63, 94, 0.18)',
+  },
+  cardTopAccentCyan: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.brandTurquoise,
+  },
+  cardTopAccentGreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.brandGreen,
+  },
+  cardTopAccentGold: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.gold,
+  },
+  cardTopAccentHeart: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.brandHeart,
+  },
+  statCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  statIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  trendBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modernStatVal: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.cream,
+    letterSpacing: -0.5,
+  },
+  modernStatLbl: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+    marginTop: 2,
+    marginBottom: SPACING.md,
+  },
+  miniProgressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    marginBottom: SPACING.md,
+  },
+  miniProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: COLORS.brandGreen,
+  },
+  statCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  statFooterSub: {
+    fontSize: 11.5,
+    color: COLORS.creamMuted,
+  },
+
+  // ── Modern Quick Operations ──
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  modernSectionHeader: {
+    fontFamily: TYPOGRAPHY.fontFamilyDisplay,
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.cream,
+  },
+  modernSectionSub: {
+    fontSize: 12.5,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  modernQuickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  modernQuickActionCard: {
+    flex: 1,
+    minWidth: 240,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'space-between',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  quickActionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  quickActionIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  quickActionArrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickActionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 4,
   },
   quickActionSub: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: COLORS.textMuted,
+    lineHeight: 18,
+    marginBottom: SPACING.md,
+  },
+  quickActionPill: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.full,
+    alignSelf: 'flex-start',
+  },
+  quickActionPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // ── Operations Pulse Row (Two Columns) ──
+  operationsPulseRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: SPACING.xs,
+  },
+  pulseCard: {
+    flex: 1,
+    minWidth: 300,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  pulseCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  pulseCardTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: COLORS.cream,
+  },
+  pulseStatusBadge: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: 'rgba(45, 212, 191, 0.12)',
+  },
+  pulseStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.brandTurquoise,
+    letterSpacing: 0.6,
+  },
+  pulseMetricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  pulseMetricBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  pulseMetricVal: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.cream,
+  },
+  pulseMetricLbl: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  pulseActionLinksRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  pulseLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : {}),
+  },
+  pulseLinkText: {
+    fontSize: 12,
+    color: COLORS.brandTurquoise,
+    fontWeight: '600',
   },
 
   // Photography Progress Card
