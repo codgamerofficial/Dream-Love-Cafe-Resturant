@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
-import { verifyServerAuthorization, checkEmailAuthorizedServer } from '../config/auth';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export type UserRole = 'owner' | 'admin' | 'manager' | 'staff';
@@ -27,6 +26,7 @@ interface AuthContextType {
   loading: boolean;
   status: UserStatus | null;
   role: UserRole | null;
+  sendMagicLink: (email: string) => Promise<{ error: string | null; success?: boolean }>;
   loginWithPassword: (email: string, pass: string) => Promise<{ error: string | null; success: boolean; authorized?: boolean }>;
   registerAdminAccount: (data: { fullName: string; email: string; password: string }) => Promise<{ error: string | null; success?: boolean; sessionEstablished?: boolean }>;
   sendPasswordReset: (email: string) => Promise<{ error: string | null; success?: boolean }>;
@@ -115,27 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // ── Server-Side Authorization Validator ──────────────────────────────────
+  // ── Session Authorization Validator (Any Authenticated Supabase User) ───
   const validateSessionAuthorization = useCallback(async (session: any): Promise<boolean> => {
-    if (!session?.access_token || !session?.user) {
+    if (!session?.user) {
       setIsAuthorized(false);
       return false;
     }
-
-    try {
-      const serverResult = await verifyServerAuthorization(session.access_token);
-      if (serverResult.authorized) {
-        setIsAuthorized(true);
-        return true;
-      } else {
-        setIsAuthorized(false);
-        return false;
-      }
-    } catch (e) {
-      console.warn('Authorization verification error:', e);
-      setIsAuthorized(false);
-      return false;
-    }
+    // Any authenticated Supabase user is authorized for the admin portal
+    setIsAuthorized(true);
+    return true;
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -222,7 +210,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [fetchOrCreateProfile, validateSessionAuthorization]);
 
-  // ── Email + Password Authentication (Sign In) ───────────────────────────
+  // ── Supabase Passwordless Magic Link Authentication ─────────────────────
+  const sendMagicLink = async (
+    email: string
+  ): Promise<{ error: string | null; success?: boolean }> => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return { error: 'Please enter a valid email address.' };
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: 'Authentication service is unconfigured. Please check environment settings.' };
+    }
+
+    try {
+      const origin = typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : (process.env.EXPO_PUBLIC_SITE_URL || 'http://localhost:8081');
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+          shouldCreateUser: true,
+        },
+      });
+
+      if (error) {
+        if (
+          error.message?.includes('rate limit') ||
+          (error as any)?.code === 'over_email_send_rate_limit' ||
+          error.status === 429
+        ) {
+          return {
+            error: 'Supabase email rate limit reached (free tier limit is ~3-4 emails/hr). If you recently received a sign-in link, please check your inbox or spam folder, or wait a few minutes.',
+          };
+        }
+        return { error: error.message || 'Failed to send magic link.' };
+      }
+
+      return { error: null, success: true };
+    } catch (err: any) {
+      return { error: err?.message || 'Failed to send magic link.' };
+    }
+  };
+
+  // ── Email + Password Authentication (Sign In Fallback) ───────────────────
   const loginWithPassword = async (
     email: string,
     pass: string
@@ -262,7 +296,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error.message?.includes('credentials')
         ) {
           return { 
-            error: 'Invalid email or password. Please verify your credentials or use "Forgot Password?" to reset.', 
+            error: 'Invalid email or password. Please verify your credentials or sign in with Magic Link.', 
             success: false 
           };
         }
@@ -279,16 +313,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!data.session || !data.user) {
         return { error: 'Failed to establish an authenticated session.', success: false };
-      }
-
-      // Perform server-side authorization check against allowlist
-      const authorized = await validateSessionAuthorization(data.session);
-      if (!authorized) {
-        await supabase.auth.signOut();
-        setUser(null);
-        setProfile(null);
-        setIsAuthorized(false);
-        return { error: 'This email is not authorized for the Dream Love admin portal.', success: false, authorized: false };
       }
 
       // Establish verified authorized session
@@ -328,12 +352,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (!password || password.length < 8) {
       return { error: 'Password must be at least 8 characters long.' };
-    }
-
-    // Step 1: Server-side pre-check against AUTHORIZED_STAFF_EMAILS
-    const authCheck = await checkEmailAuthorizedServer(cleanEmail);
-    if (!authCheck.authorized) {
-      return { error: authCheck.error || 'This email is not authorized for the Dream Love admin portal.' };
     }
 
     if (!isSupabaseConfigured || !supabase) {
@@ -421,12 +439,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return { error: 'Please enter a valid email address.' };
-    }
-
-    // Server-side authorization check
-    const authCheck = await checkEmailAuthorizedServer(cleanEmail);
-    if (!authCheck.authorized) {
-      return { error: 'This email is not authorized for the Dream Love admin portal.' };
     }
 
     if (!isSupabaseConfigured || !supabase) {
@@ -527,6 +539,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         status: profile?.status ?? (user ? 'active' : null),
         role: profile?.role ?? (user ? 'admin' : null),
+        sendMagicLink,
         loginWithPassword,
         registerAdminAccount,
         sendPasswordReset,

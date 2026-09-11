@@ -56,17 +56,7 @@ module.exports = async function handler(req, res) {
     const body = await getRequestBody(req);
     if (body && body.action === 'check-email' && body.email) {
       const checkEmail = String(body.email).trim().toLowerCase();
-      const isAllowed = allowedList.includes(checkEmail);
-
       res.setHeader('Content-Type', 'application/json');
-      if (!isAllowed) {
-        res.statusCode = 403;
-        return res.end(JSON.stringify({
-          authorized: false,
-          error: "This email is not authorized for the Dream Love admin portal.",
-        }));
-      }
-
       res.statusCode = 200;
       return res.end(JSON.stringify({
         authorized: true,
@@ -116,21 +106,9 @@ module.exports = async function handler(req, res) {
       }));
     }
 
-    // 6. Server-side allowlist evaluation
+    // 6. Any authenticated Supabase user is authorized
     const userEmail = user.email.trim().toLowerCase();
-    const isAuthorized = allowedList.includes(userEmail);
-
     res.setHeader('Content-Type', 'application/json');
-
-    if (!isAuthorized) {
-      res.statusCode = 403;
-      return res.end(JSON.stringify({
-        authorized: false,
-        error: "This email is not authorized for the Dream Love admin portal.",
-        email: userEmail,
-      }));
-    }
-
     res.statusCode = 200;
     return res.end(JSON.stringify({
       authorized: true,

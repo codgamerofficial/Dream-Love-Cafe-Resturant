@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { ShieldCheck, AlertCircle, ArrowLeft, ShieldX, CheckCircle2 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../src/theme';
 import { supabase, isSupabaseConfigured } from '../../src/services/supabase';
-import { verifyServerAuthorization } from '../../src/config/auth';
 import { BrandLogo } from '../../src/components/ui/BrandLogo';
 
 export default function AuthCallbackPage() {
@@ -112,7 +111,7 @@ export default function AuthCallbackPage() {
           }
         }
 
-        if (!authSession?.user || !authSession?.access_token) {
+        if (!authSession?.user) {
           if (isMounted) {
             setStatus('error');
             setErrorMessage('The authentication link has expired or has already been used. Please request a new link from the login page.');
@@ -123,21 +122,9 @@ export default function AuthCallbackPage() {
         const authUser = authSession.user;
         const userEmail = authUser.email?.toLowerCase().trim();
 
-        // ── 4. Perform Server-Side Authorization Check ──
-        const serverAuth = await verifyServerAuthorization(authSession.access_token);
-
-        if (!serverAuth.authorized) {
-          // Immediately terminate remote session for unauthorized email
-          await supabase.auth.signOut();
-          if (isMounted) {
-            setStatus('unauthorized');
-            setErrorMessage(serverAuth.error || "Admin access isn't available for this email address.");
-          }
-          // Redirect unauthorized users to /admin/access-denied
-          setTimeout(() => {
-            if (isMounted) router.replace('/admin/access-denied');
-          }, 1500);
-          return;
+        // Authenticated user via Supabase Magic Link - Granted Admin Portal Access
+        if (isMounted) {
+          setStatus('success');
         }
 
         // ── 5. Ensure Active Database Profile Exists (NO Owner Approval Required) ──

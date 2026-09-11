@@ -87,3 +87,21 @@ server.listen(PORT, () => {
   console.log(`\n🚀 Dream Love Cafe & Restaurant is running locally!`);
   console.log(`👉 http://localhost:${PORT}\n`);
 });
+
+// Port 3000 forwarder so older Supabase magic links pointing to localhost:3000 redirect seamlessly
+if (Number(PORT) !== 3000) {
+  const redirectServer = http.createServer((req, res) => {
+    res.writeHead(302, {
+      Location: `http://localhost:${PORT}${req.url}`
+    });
+    res.end();
+  });
+  redirectServer.on('error', (err) => {
+    // Port 3000 might be in use or unavailable, ignore gracefully
+  });
+  try {
+    redirectServer.listen(3000, () => {
+      console.log(`🔀 Port 3000 redirector active -> forwarding to http://localhost:${PORT}`);
+    });
+  } catch {}
+}

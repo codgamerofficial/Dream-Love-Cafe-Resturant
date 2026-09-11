@@ -819,10 +819,8 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace('/admin/login');
-    } else if (!authLoading && user && !isAuthorized) {
-      router.replace('/admin/access-denied');
     }
-  }, [authLoading, user, isAuthorized, router]);
+  }, [authLoading, user, router]);
 
   if (authLoading) {
     return (
