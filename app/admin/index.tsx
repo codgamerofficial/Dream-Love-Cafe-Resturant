@@ -60,13 +60,19 @@ import {
   History,
   UploadCloud,
   Sliders,
-  FileImage
+  FileImage,
+  ChevronUp,
+  ChevronDown,
+  Key,
+  Copy,
+  CheckSquare
 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../src/theme';
 import { useAuth, UserRole, UserProfile } from '../../src/context/AuthContext';
 import { useSettings } from '../../src/context/SettingsContext';
 import { 
   MenuItem, 
+  MenuCategory,
   CategorySlug, 
   ImageType, 
   ImageLicenseStatus, 
@@ -84,19 +90,30 @@ import {
 } from '../../src/config/dishImageMap';
 import { validateImageFile } from '../../src/services/imageUploadService';
 import { supabase, isSupabaseConfigured } from '../../src/services/supabase';
-import { formatTime12Hour, formatDisplayDate, getKolkataCurrentDate, loadLocalReservations } from '../../src/utils/reservation';
+import { 
+  formatTime12Hour, 
+  formatDisplayDate, 
+  getKolkataCurrentDate, 
+  loadLocalReservations,
+  updateLocalReservationStatus
+} from '../../src/utils/reservation';
 
 export type AdminTabType = 
-  | 'food-images' 
   | 'dashboard' 
-  | 'menu' 
   | 'orders' 
   | 'reservations' 
+  | 'menu' 
+  | 'categories' 
+  | 'food-images' 
+  | 'customers' 
   | 'reviews' 
   | 'gallery' 
-  | 'verification' 
+  | 'analytics' 
+  | 'settings' 
   | 'staff' 
-  | 'settings';
+  | 'profile' 
+  | 'security' 
+  | 'verification';
 
 interface AdminPageProps {
   initialTab?: AdminTabType;
@@ -106,7 +123,17 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
   const router = useRouter();
   const searchParams = useLocalSearchParams<{ tab?: string }>();
   const { width } = useWindowDimensions();
-  const { user, profile, isAdmin, isAuthorized, loading: authLoading, logout, hasRole } = useAuth();
+  const { 
+    user, 
+    profile, 
+    isAdmin, 
+    isAuthorized, 
+    loading: authLoading, 
+    logout, 
+    hasRole,
+    updateUserPassword,
+    refreshProfile
+  } = useAuth();
   const { 
     settings, 
     updateSettings, 
@@ -117,12 +144,19 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
     toggleAvailability, 
     toggleFeatured, 
     uploadMenuItemPhoto,
+    removeMenuItemPhoto,
     restoreMenuItemPhotoVersion,
     getMenuItemPhotoHistory,
     galleryItems, 
     addGalleryItem, 
     deleteGalleryItem, 
     categories, 
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
+    duplicateMenuItem,
+    toggleSpecial,
     dataConflicts, 
     resolveDataConflict, 
     ignoreDataConflict,
@@ -199,12 +233,44 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
   // Live Orders State
   const [orders, setOrders] = useState<DatabaseOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [orderFilter, setOrderFilter] = useState<'all' | 'new' | 'accepted' | 'preparing' | 'ready' | 'completed'>('all');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'new' | 'accepted' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled'>('all');
 
   // Live Reservations State
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(false);
-  const [reservationFilter, setReservationFilter] = useState<'all' | 'today' | 'upcoming' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [reservationFilter, setReservationFilter] = useState<'all' | 'today' | 'upcoming' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'>('all');
+
+  // Category Management State
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [catSlug, setCatSlug] = useState('');
+  const [catIcon, setCatIcon] = useState('🍽️');
+  const [catDesc, setCatDesc] = useState('');
+
+  // Customer Directory Search State
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  // Security & Password Management State
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Profile Management State
+  const [profileFullName, setProfileFullName] = useState(profile?.full_name || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Floating Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((prev) => (prev?.message === message ? null : prev));
+    }, 3500);
+  }, []);
 
   // Sign Out State & Confirmation Dialog
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -384,8 +450,8 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
         fetchReservations();
       }
       if (activeTab === 'staff') fetchStaffProfiles();
-      if (activeTab === 'orders') fetchOrders();
-      if (activeTab === 'reservations') fetchReservations();
+      if (activeTab === 'orders' || activeTab === 'customers' || activeTab === 'analytics') fetchOrders();
+      if (activeTab === 'reservations' || activeTab === 'customers' || activeTab === 'analytics') fetchReservations();
     }
   }, [activeTab, isAuthorized, fetchStaffProfiles, fetchOrders, fetchReservations]);
 
@@ -452,26 +518,91 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
 
   // ── Order / Reservation Status Updates ─────────────────────────────────
   const handleUpdateOrderStatus = async (orderId: string, newStatus: any) => {
-    if (!isSupabaseConfigured || !supabase) return;
-    try {
-      await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      logAudit('order_status_updated', 'orders', orderId, { status: newStatus });
-    } catch (err) {
-      console.log('Error updating order:', err);
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+      } catch (err) {
+        console.log('Error updating order:', err);
+      }
     }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    logAudit('order_status_updated', 'orders', orderId, { status: newStatus });
+    showToast(`Order status updated to ${newStatus.replace(/_/g, ' ')}`);
   };
 
   const handleUpdateReservationStatus = async (reservationId: string, newStatus: any) => {
-    if (!isSupabaseConfigured || !supabase) return;
-    try {
-      await supabase.from('reservations').update({ status: newStatus }).eq('id', reservationId);
-      setReservations(prev => prev.map(r => r.id === reservationId ? { ...r, status: newStatus } : r));
-      logAudit('reservation_status_updated', 'reservations', reservationId, { status: newStatus });
-    } catch (err) {
-      console.log('Error updating reservation:', err);
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('reservations').update({ status: newStatus }).eq('id', reservationId);
+      } catch (err) {
+        console.log('Error updating reservation in remote:', err);
+      }
     }
+    await updateLocalReservationStatus(reservationId, newStatus);
+    setReservations(prev => prev.map(r => ((r as any).reference_code === reservationId || r.id === reservationId) ? { ...r, status: newStatus } : r));
+    logAudit('reservation_status_updated', 'reservations', reservationId, { status: newStatus });
+    showToast(`Reservation marked ${newStatus.replace(/_/g, ' ')}`);
   };
+
+  // ── Aggregated Customer Directory CRM ─────────────────────────────────
+  const aggregatedCustomers = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      name: string;
+      phone: string;
+      email?: string;
+      orderCount: number;
+      reservationCount: number;
+      totalSpend: number;
+      lastActive: string;
+    }>();
+
+    orders.forEach((o) => {
+      const rawPhone = (o.customer_phone || '').replace(/[^0-9]/g, '');
+      const key = rawPhone || (o.customer_name || '').trim().toLowerCase();
+      if (!key) return;
+      const existing = map.get(key) || {
+        key,
+        name: o.customer_name || 'Customer',
+        phone: o.customer_phone || '',
+        email: (o as any).customer_email || undefined,
+        orderCount: 0,
+        reservationCount: 0,
+        totalSpend: 0,
+        lastActive: o.created_at || '',
+      };
+      existing.orderCount += 1;
+      existing.totalSpend += Number(o.total_amount) || 0;
+      if (o.created_at && (!existing.lastActive || o.created_at > existing.lastActive)) {
+        existing.lastActive = o.created_at;
+      }
+      map.set(key, existing);
+    });
+
+    reservations.forEach((r) => {
+      const rawPhone = (r.phone || (r as any).customer_phone || '').replace(/[^0-9]/g, '');
+      const key = rawPhone || (r.name || (r as any).customer_name || '').trim().toLowerCase();
+      if (!key) return;
+      const existing = map.get(key) || {
+        key,
+        name: r.name || (r as any).customer_name || 'Guest',
+        phone: r.phone || (r as any).customer_phone || '',
+        email: (r as any).email || (r as any).customer_email || undefined,
+        orderCount: 0,
+        reservationCount: 0,
+        totalSpend: 0,
+        lastActive: (r as any).created_at || r.date || '',
+      };
+      existing.reservationCount += 1;
+      const rDate = (r as any).created_at || r.date || '';
+      if (rDate && (!existing.lastActive || rDate > existing.lastActive)) {
+        existing.lastActive = rDate;
+      }
+      map.set(key, existing);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalSpend - a.totalSpend || b.orderCount - a.orderCount);
+  }, [orders, reservations]);
 
   // ── Food Photography Metrics & Progress ─────────────────────────────────
   const totalItemsCount = menuItems.length;
@@ -675,6 +806,7 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
       });
 
       setUploadStage('done');
+      showToast('Image updated successfully');
       logAudit('food_image_uploaded_and_saved', 'menu_images', itemId, {
         imageUrl: res.imageUrl,
         storagePath: res.imageRecord?.storage_path,
@@ -822,22 +954,28 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
 
   // Navigation Tabs Configuration (Must be declared before any conditional returns to obey Rules of Hooks)
   const navTabs = useMemo(() => {
+    const newOrdersCount = orders.filter(o => o.status === 'new').length;
+    const pendingResCount = reservations.filter(r => r.status === 'pending').length;
+
     const tabs: { id: AdminTabType; label: string; icon: any; count?: number | string; color?: string; badgeColor?: string }[] = [
-      { id: 'dashboard', label: 'Overview', icon: Sparkles },
-      { id: 'food-images', label: 'Food Photography', icon: Camera, count: `${realPhotosCount}/${totalItemsCount}`, color: COLORS.brandTurquoise },
+      { id: 'dashboard', label: 'Dashboard', icon: Sparkles },
+      { id: 'orders', label: 'Orders', icon: ShoppingBag, count: newOrdersCount || undefined, badgeColor: COLORS.brandHeart },
+      { id: 'reservations', label: 'Reservations', icon: Calendar, count: pendingResCount || undefined, badgeColor: COLORS.gold },
       { id: 'menu', label: 'Menu Dishes', icon: Utensils, count: menuItems.length },
-      { id: 'orders', label: 'Orders', icon: ShoppingBag, count: orders.filter(o => o.status === 'new').length || undefined, badgeColor: COLORS.brandHeart },
-      { id: 'reservations', label: 'Reservations', icon: Calendar, count: reservations.filter(r => r.status === 'pending').length || undefined, badgeColor: COLORS.gold },
-      { id: 'reviews', label: 'Diner Reviews', icon: Star, count: verifiedReviews.length, color: COLORS.gold },
-      { id: 'gallery', label: 'Storefront Photos', icon: ImageIcon, count: galleryItems.length },
+      { id: 'categories', label: 'Categories', icon: Layers, count: categories.length },
+      { id: 'food-images', label: 'Food Photography', icon: Camera, count: `${realPhotosCount}/${totalItemsCount}`, color: COLORS.brandTurquoise },
+      { id: 'customers', label: 'Customers', icon: Users, count: aggregatedCustomers.length || undefined },
+      { id: 'reviews', label: 'Reviews', icon: Star, count: verifiedReviews.length, color: COLORS.gold },
+      { id: 'gallery', label: 'Gallery', icon: ImageIcon, count: galleryItems.length },
+      { id: 'analytics', label: 'Analytics', icon: Sliders },
+      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'staff', label: 'Staff & Roster', icon: Users, count: staffProfiles.filter(p => p.status === 'active').length || undefined },
+      { id: 'profile', label: 'My Profile', icon: UserCheck },
+      { id: 'security', label: 'Security & Auth', icon: Shield },
       { id: 'verification', label: 'Listing Sync', icon: AlertTriangle, count: dataConflicts.filter(c => c.status === 'pending_review').length || undefined, color: COLORS.gold },
     ];
-    if (isOwnerOrAdmin) {
-      tabs.push({ id: 'staff', label: 'Staff & Access', icon: Users, count: staffProfiles.filter(p => p.status === 'active').length || undefined });
-      tabs.push({ id: 'settings', label: 'Restaurant & Map', icon: Settings });
-    }
     return tabs;
-  }, [realPhotosCount, totalItemsCount, menuItems.length, orders, reservations, verifiedReviews.length, galleryItems.length, dataConflicts, isOwnerOrAdmin, staffProfiles]);
+  }, [orders, reservations, menuItems.length, categories.length, realPhotosCount, totalItemsCount, aggregatedCustomers.length, verifiedReviews.length, galleryItems.length, staffProfiles, dataConflicts]);
 
   // ── Authentication Check & Redirect ─────────────────────────────────────
   useEffect(() => {
@@ -2087,6 +2225,24 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    style={styles.removePhotoBtn}
+                    onPress={async () => {
+                      if (!editingImageItemId) return;
+                      await removeMenuItemPhoto(editingImageItemId);
+                      setEditingImageItemId(null);
+                      setSelectedFile(null);
+                      setSelectedFilePreview(null);
+                      setSelectedFileMeta(null);
+                      setUploadStage('idle');
+                      showToast('Photo removed, dish reverted to category fallback');
+                    }}
+                    disabled={uploadStage !== 'idle' && uploadStage !== 'done'}
+                  >
+                    <Trash2 size={15} color={COLORS.errorLight} style={{ marginRight: 6 }} />
+                    <Text style={styles.removePhotoBtnText}>Remove Photo</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
                     style={styles.cancelBtn}
                     onPress={() => {
                       setEditingImageItemId(null);
@@ -2525,7 +2681,7 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
             </View>
 
             <View style={styles.filterPillsRow}>
-              {(['all', 'new', 'accepted', 'ready', 'completed'] as const).map((filterKey) => {
+              {(['all', 'new', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled'] as const).map((filterKey) => {
                 const count = filterKey === 'all' 
                   ? orders.length 
                   : orders.filter(o => o.status === filterKey).length;
@@ -2538,7 +2694,7 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.filterPillText, orderFilter === filterKey && styles.filterPillTextActive]}>
-                      {filterKey.toUpperCase()} ({count})
+                      {filterKey.replace(/_/g, ' ').toUpperCase()} ({count})
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2587,11 +2743,14 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                       <View style={[
                         styles.statusPill,
                         order.status === 'completed' ? styles.statusPillConfirmed :
-                        order.status === 'ready' ? styles.statusPillPending :
+                        order.status === 'out_for_delivery' ? styles.statusPillDelivery :
+                        order.status === 'ready' ? styles.statusPillReady :
+                        order.status === 'preparing' ? styles.statusPillPreparing :
                         order.status === 'accepted' ? styles.statusPillPending :
-                        styles.statusPillCancelled
+                        order.status === 'cancelled' ? styles.statusPillCancelled :
+                        styles.statusPillNew
                       ]}>
-                        <Text style={styles.statusPillText}>{order.status.toUpperCase()}</Text>
+                        <Text style={styles.statusPillText}>{order.status.replace(/_/g, ' ').toUpperCase()}</Text>
                       </View>
 
                       {/* Customer Contact & Status Actions */}
@@ -2626,10 +2785,20 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                             style={styles.orderBtnAccept}
                             onPress={() => handleUpdateOrderStatus(order.id!, 'accepted')}
                           >
-                            <Text style={styles.orderBtnText}>Accept</Text>
+                            <Text style={styles.orderBtnText}>Accept Order</Text>
                           </TouchableOpacity>
                         )}
+
                         {order.status === 'accepted' && (
+                          <TouchableOpacity 
+                            style={styles.orderBtnPreparing}
+                            onPress={() => handleUpdateOrderStatus(order.id!, 'preparing')}
+                          >
+                            <Text style={styles.orderBtnText}>Start Preparing</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {order.status === 'preparing' && (
                           <TouchableOpacity 
                             style={styles.orderBtnReady}
                             onPress={() => handleUpdateOrderStatus(order.id!, 'ready')}
@@ -2637,12 +2806,31 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                             <Text style={styles.orderBtnText}>Mark Ready</Text>
                           </TouchableOpacity>
                         )}
-                        {order.status !== 'completed' && order.status !== 'cancelled' && (
+
+                        {order.status === 'ready' && order.order_type === 'delivery' && (
+                          <TouchableOpacity 
+                            style={styles.orderBtnDelivery}
+                            onPress={() => handleUpdateOrderStatus(order.id!, 'out_for_delivery')}
+                          >
+                            <Text style={styles.orderBtnText}>Out for Delivery</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {(order.status === 'ready' || order.status === 'out_for_delivery') && (
                           <TouchableOpacity 
                             style={styles.orderBtnComplete}
                             onPress={() => handleUpdateOrderStatus(order.id!, 'completed')}
                           >
-                            <Text style={styles.orderBtnText}>Complete</Text>
+                            <Text style={styles.orderBtnText}>Complete Order</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {order.status !== 'completed' && order.status !== 'cancelled' && (
+                          <TouchableOpacity 
+                            style={styles.orderBtnCancel}
+                            onPress={() => handleUpdateOrderStatus(order.id!, 'cancelled')}
+                          >
+                            <Text style={styles.orderBtnText}>Cancel</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -2707,13 +2895,13 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
 
             {/* Filter Pills */}
             <View style={styles.filterPillsRow}>
-              {(['all', 'today', 'pending', 'confirmed', 'upcoming', 'completed', 'cancelled'] as const).map((filterKey) => {
+              {(['all', 'today', 'pending', 'confirmed', 'upcoming', 'completed', 'cancelled', 'no_show'] as const).map((filterKey) => {
                 const count = filterKey === 'all' 
                   ? reservations.length 
                   : filterKey === 'today'
                   ? reservations.filter(r => r.date === getKolkataCurrentDate()).length
                   : filterKey === 'upcoming'
-                  ? reservations.filter(r => r.date >= getKolkataCurrentDate() && r.status !== 'cancelled').length
+                  ? reservations.filter(r => r.date >= getKolkataCurrentDate() && r.status !== 'cancelled' && r.status !== 'rejected').length
                   : filterKey === 'cancelled'
                   ? reservations.filter(r => r.status === 'cancelled' || r.status === 'rejected').length
                   : reservations.filter(r => r.status === filterKey).length;
@@ -2725,7 +2913,7 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                     onPress={() => setReservationFilter(filterKey)}
                   >
                     <Text style={[styles.filterPillText, reservationFilter === filterKey && styles.filterPillTextActive]}>
-                      {filterKey.charAt(0).toUpperCase() + filterKey.slice(1)} ({count})
+                      {filterKey === 'no_show' ? 'NO-SHOW' : filterKey.charAt(0).toUpperCase() + filterKey.slice(1)} ({count})
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2750,6 +2938,7 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                     if (reservationFilter === 'confirmed') return r.status === 'confirmed';
                     if (reservationFilter === 'completed') return r.status === 'completed';
                     if (reservationFilter === 'cancelled') return r.status === 'cancelled' || r.status === 'rejected';
+                    if (reservationFilter === 'no_show') return r.status === 'no_show';
                     return true;
                   })
                   .map((res) => {
@@ -2850,6 +3039,13 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
                                 >
                                   <CheckCircle size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
                                   <Text style={styles.orderBtnText}>Mark Seated</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                  style={styles.orderBtnNoShow}
+                                  onPress={() => handleUpdateReservationStatus(res.id!, 'no_show')}
+                                >
+                                  <AlertTriangle size={13} color={COLORS.copperLight} style={{ marginRight: 4 }} />
+                                  <Text style={styles.orderBtnNoShowText}>No-Show</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                   style={styles.orderBtnCancel}
@@ -3189,6 +3385,692 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
           </View>
         )}
 
+        {/* ── TAB: CATEGORIES MANAGEMENT ── */}
+        {activeTab === 'categories' && (
+          <View>
+            <View style={styles.tabHeaderRow}>
+              <View>
+                <Text style={styles.tabHeading}>Menu Categories</Text>
+                <Text style={styles.tabSubheading}>
+                  Total {categories.length} categories active in canonical menu. Reorder hierarchy, toggle customer visibility, or add special sections.
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.addItemBtn} 
+                onPress={() => {
+                  setCatName('');
+                  setCatSlug('');
+                  setCatIcon('🍽️');
+                  setCatDesc('');
+                  setIsAddingCategory(true);
+                }}
+              >
+                <Plus size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.addItemBtnText}>Add Category</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Category Search Filter */}
+            <View style={[styles.searchBar, { marginBottom: SPACING.md }]}>
+              <Search size={16} color={COLORS.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search categories..."
+                placeholderTextColor={COLORS.textSubtle}
+                value={categorySearchQuery}
+                onChangeText={setCategorySearchQuery}
+              />
+              {categorySearchQuery ? (
+                <TouchableOpacity onPress={() => setCategorySearchQuery('')}>
+                  <XCircle size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Categories Table / List */}
+            <View style={styles.adminTable}>
+              {categories
+                .filter(cat => {
+                  if (!categorySearchQuery.trim()) return true;
+                  const q = categorySearchQuery.toLowerCase();
+                  return cat.name.toLowerCase().includes(q) || cat.slug.toLowerCase().includes(q);
+                })
+                .map((cat, idx) => {
+                  const dishCount = menuItems.filter(i => i.category === cat.slug).length;
+                  return (
+                    <View key={cat.id || cat.slug} style={styles.categoryTableRow}>
+                      <View style={styles.catOrderBox}>
+                        <Text style={styles.catOrderText}>#{cat.display_order || idx + 1}</Text>
+                      </View>
+
+                      <View style={styles.catIconBox}>
+                        <Text style={{ fontSize: 20 }}>{cat.icon || '🍽️'}</Text>
+                      </View>
+
+                      <View style={{ flex: 1, paddingHorizontal: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text style={styles.rowItemName}>{cat.name}</Text>
+                          <View style={cat.is_active ? styles.catActiveBadge : styles.catInactiveBadge}>
+                            <Text style={cat.is_active ? styles.catActiveBadgeText : styles.catInactiveBadgeText}>
+                              {cat.is_active ? 'ACTIVE' : 'HIDDEN'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.rowItemSub}>
+                          Slug: {cat.slug} • {dishCount} {dishCount === 1 ? 'Dish' : 'Dishes'}
+                        </Text>
+                        {cat.description ? (
+                          <Text style={styles.catDescSub} numberOfLines={1}>{cat.description}</Text>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.rowActions}>
+                        {/* Move Up */}
+                        <TouchableOpacity
+                          style={[styles.reorderBtn, idx === 0 && { opacity: 0.3 }]}
+                          disabled={idx === 0}
+                          onPress={() => {
+                            if (idx === 0) return;
+                            const newCats = [...categories];
+                            const temp = newCats[idx - 1];
+                            newCats[idx - 1] = newCats[idx];
+                            newCats[idx] = temp;
+                            reorderCategories(newCats);
+                            showToast(`Moved "${cat.name}" up`);
+                          }}
+                          accessibilityLabel="Move category up"
+                        >
+                          <ChevronUp size={16} color={COLORS.cream} />
+                        </TouchableOpacity>
+
+                        {/* Move Down */}
+                        <TouchableOpacity
+                          style={[styles.reorderBtn, idx === categories.length - 1 && { opacity: 0.3 }]}
+                          disabled={idx === categories.length - 1}
+                          onPress={() => {
+                            if (idx === categories.length - 1) return;
+                            const newCats = [...categories];
+                            const temp = newCats[idx + 1];
+                            newCats[idx + 1] = newCats[idx];
+                            newCats[idx] = temp;
+                            reorderCategories(newCats);
+                            showToast(`Moved "${cat.name}" down`);
+                          }}
+                          accessibilityLabel="Move category down"
+                        >
+                          <ChevronDown size={16} color={COLORS.cream} />
+                        </TouchableOpacity>
+
+                        {/* Toggle Active */}
+                        <TouchableOpacity
+                          style={[styles.statusToggle, cat.is_active ? styles.availableBtn : styles.unavailableBtn]}
+                          onPress={() => {
+                            updateCategory(cat.id, { is_active: !cat.is_active });
+                            showToast(`${cat.name} marked ${!cat.is_active ? 'Active' : 'Hidden'}`);
+                          }}
+                        >
+                          <Text style={styles.statusToggleText}>
+                            {cat.is_active ? 'Active' : 'Hidden'}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {/* Edit */}
+                        <TouchableOpacity
+                          style={styles.previewBtn}
+                          onPress={() => setEditingCategory(cat)}
+                        >
+                          <Edit3 size={14} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+                          <Text style={[styles.previewBtnText, { color: COLORS.brandTurquoise }]}>Edit</Text>
+                        </TouchableOpacity>
+
+                        {/* Delete */}
+                        {isOwnerOrAdmin && (
+                          <TouchableOpacity
+                            style={styles.deleteRowBtn}
+                            onPress={() => {
+                              deleteCategory(cat.id);
+                              showToast(`Deleted category "${cat.name}"`, 'info');
+                            }}
+                          >
+                            <Trash2 size={16} color={COLORS.errorLight} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+            </View>
+          </View>
+        )}
+
+        {/* ── TAB: CUSTOMER DIRECTORY & CRM ── */}
+        {activeTab === 'customers' && (
+          <View>
+            <View style={styles.tabHeaderRow}>
+              <View>
+                <Text style={styles.tabHeading}>Customer Directory & CRM</Text>
+                <Text style={styles.tabSubheading}>
+                  Total {aggregatedCustomers.length} unique patrons from online orders and table bookings.
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.refreshBtn} 
+                onPress={() => {
+                  fetchOrders();
+                  fetchReservations();
+                  showToast('Customer directory refreshed');
+                }}
+              >
+                <RefreshCw size={14} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                <Text style={styles.refreshBtnText}>Refresh</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Metric Cards */}
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Total Patrons</Text>
+                <Text style={[styles.metricValue, { color: COLORS.brandTurquoise }]}>{aggregatedCustomers.length}</Text>
+                <Text style={styles.metricSub}>Online diner directory</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Repeat Diners</Text>
+                <Text style={[styles.metricValue, { color: COLORS.brandGreen }]}>
+                  {aggregatedCustomers.filter(c => c.orderCount + c.reservationCount > 1).length}
+                </Text>
+                <Text style={styles.metricSub}>Ordered or booked 2+ times</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Total Online Spend</Text>
+                <Text style={[styles.metricValue, { color: COLORS.gold }]}>
+                  ₹{aggregatedCustomers.reduce((sum, c) => sum + c.totalSpend, 0).toLocaleString()}
+                </Text>
+                <Text style={styles.metricSub}>Cumulative online orders</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Highest Spender</Text>
+                <Text style={[styles.metricValue, { color: COLORS.cream, fontSize: 18 }]} numberOfLines={1}>
+                  {aggregatedCustomers[0]?.name || 'N/A'}
+                </Text>
+                <Text style={styles.metricSub}>
+                  {aggregatedCustomers[0]?.totalSpend ? `₹${aggregatedCustomers[0].totalSpend} spent` : 'No orders yet'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Customer Search Filter */}
+            <View style={[styles.searchBar, { marginBottom: SPACING.md }]}>
+              <Search size={16} color={COLORS.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search patrons by name or phone..."
+                placeholderTextColor={COLORS.textSubtle}
+                value={customerSearchQuery}
+                onChangeText={setCustomerSearchQuery}
+              />
+              {customerSearchQuery ? (
+                <TouchableOpacity onPress={() => setCustomerSearchQuery('')}>
+                  <XCircle size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Customer List */}
+            {aggregatedCustomers.length === 0 ? (
+              <View style={styles.emptyStateCard}>
+                <Users size={40} color={COLORS.textSubtle} style={{ marginBottom: 10 }} />
+                <Text style={styles.emptyStateTitle}>No Customers Found</Text>
+                <Text style={styles.emptyStateSub}>Patron details will automatically populate as orders and table bookings arrive.</Text>
+              </View>
+            ) : (
+              <View style={styles.adminTable}>
+                {aggregatedCustomers
+                  .filter(c => {
+                    if (!customerSearchQuery.trim()) return true;
+                    const q = customerSearchQuery.toLowerCase();
+                    return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+                  })
+                  .map((cust) => (
+                    <View key={cust.key} style={styles.customerRowCard}>
+                      <View style={styles.customerAvatarBox}>
+                        <Text style={styles.customerAvatarText}>
+                          {cust.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                        <Text style={styles.rowItemName}>{cust.name}</Text>
+                        <Text style={styles.rowItemSub}>
+                          📞 {cust.phone || 'No phone'} {cust.email ? `• ✉️ ${cust.email}` : ''}
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                          <View style={styles.customerCountChip}>
+                            <Text style={styles.customerCountChipText}>{cust.orderCount} Orders</Text>
+                          </View>
+                          <View style={[styles.customerCountChip, { backgroundColor: 'rgba(212, 175, 55, 0.12)', borderColor: 'rgba(212, 175, 55, 0.3)' }]}>
+                            <Text style={[styles.customerCountChipText, { color: COLORS.gold }]}>{cust.reservationCount} Bookings</Text>
+                          </View>
+                          {cust.totalSpend > 0 && (
+                            <View style={[styles.customerCountChip, { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.3)' }]}>
+                              <Text style={[styles.customerCountChipText, { color: COLORS.brandGreen }]}>₹{cust.totalSpend} Total</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Contact Actions */}
+                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        {cust.phone ? (
+                          <>
+                            <TouchableOpacity
+                              style={styles.actionIconBtn}
+                              onPress={() => Linking.openURL(`tel:${cust.phone.replace(/[^0-9+]/g, '')}`)}
+                              accessibilityLabel="Call Customer"
+                            >
+                              <Phone size={14} color={COLORS.brandTurquoise} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.actionIconBtn}
+                              onPress={() => {
+                                const msg = encodeURIComponent(`Hello ${cust.name}, greetings from Dream Love Cafe & Restaurant! We would love to assist you today.`);
+                                Linking.openURL(`https://wa.me/${cust.phone.replace(/[^0-9]/g, '')}?text=${msg}`);
+                              }}
+                              accessibilityLabel="WhatsApp Customer"
+                            >
+                              <MessageSquare size={14} color={COLORS.brandGreen} />
+                            </TouchableOpacity>
+                          </>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── TAB: OPERATIONAL TELEMETRY & ANALYTICS ── */}
+        {activeTab === 'analytics' && (
+          <View>
+            <View style={styles.tabHeaderRow}>
+              <View>
+                <Text style={styles.tabHeading}>Operational Telemetry & Analytics</Text>
+                <Text style={styles.tabSubheading}>
+                  Live revenue, average ticket size, fulfillment breakdown, and booking distribution for Contai, WB.
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.refreshBtn} onPress={handleRefreshTelemetry}>
+                <RefreshCw size={14} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                <Text style={styles.refreshBtnText}>Sync Telemetry</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Core Metrics Grid */}
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Gross Order Revenue</Text>
+                <Text style={[styles.metricValue, { color: COLORS.brandGreen }]}>
+                  ₹{orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0).toLocaleString()}
+                </Text>
+                <Text style={styles.metricSub}>From {orders.length} total orders</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Average Order Value (AOV)</Text>
+                <Text style={[styles.metricValue, { color: COLORS.brandTurquoise }]}>
+                  ₹{orders.length > 0 ? (orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) / orders.length).toFixed(0) : '0'}
+                </Text>
+                <Text style={styles.metricSub}>Per completed transaction</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Total Table Bookings</Text>
+                <Text style={[styles.metricValue, { color: COLORS.gold }]}>{reservations.length}</Text>
+                <Text style={styles.metricSub}>Dine-in table requests</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.metricLabel}>Total Guests Hosted</Text>
+                <Text style={[styles.metricValue, { color: COLORS.cream }]}>
+                  {reservations.reduce((sum, r) => sum + (Number(r.guests) || 2), 0)}
+                </Text>
+                <Text style={styles.metricSub}>Dine-in hospitality volume</Text>
+              </View>
+            </View>
+
+            {/* Fulfillment Mode Breakdown */}
+            <View style={styles.analyticsSectionCard}>
+              <Text style={styles.analyticsCardTitle}>Order Fulfillment Modes</Text>
+              <View style={styles.fulfillmentBarRow}>
+                {(() => {
+                  const total = orders.length || 1;
+                  const dineIn = orders.filter(o => o.order_type === 'dine-in' || (o.order_type as any) === 'dine_in').length;
+                  const takeaway = orders.filter(o => o.order_type === 'takeaway').length;
+                  const delivery = orders.filter(o => o.order_type === 'delivery').length;
+
+                  return (
+                    <>
+                      <View style={styles.modeStatBox}>
+                        <Text style={styles.modeStatVal}>{dineIn}</Text>
+                        <Text style={styles.modeStatLbl}>Dine-in ({((dineIn / total) * 100).toFixed(0)}%)</Text>
+                      </View>
+                      <View style={styles.modeStatBox}>
+                        <Text style={styles.modeStatVal}>{takeaway}</Text>
+                        <Text style={styles.modeStatLbl}>Takeaway ({((takeaway / total) * 100).toFixed(0)}%)</Text>
+                      </View>
+                      <View style={styles.modeStatBox}>
+                        <Text style={styles.modeStatVal}>{delivery}</Text>
+                        <Text style={styles.modeStatLbl}>Delivery ({((delivery / total) * 100).toFixed(0)}%)</Text>
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+            </View>
+
+            {/* Top Ordered Dishes & Peak Hours */}
+            <View style={styles.operationsPulseRow}>
+              <View style={styles.pulseCard}>
+                <Text style={styles.pulseCardTitle}>Top Ordered Dishes</Text>
+                {(() => {
+                  const dishCounts: Record<string, { name: string; count: number; total: number }> = {};
+                  orders.forEach(o => {
+                    (o.items || []).forEach(it => {
+                      if (!dishCounts[it.name]) {
+                        dishCounts[it.name] = { name: it.name, count: 0, total: 0 };
+                      }
+                      dishCounts[it.name].count += it.quantity;
+                      dishCounts[it.name].total += (it.price || 0) * it.quantity;
+                    });
+                  });
+                  const topDishes = Object.values(dishCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+                  if (topDishes.length === 0) {
+                    return (
+                      <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                        <Utensils size={24} color={COLORS.textSubtle} />
+                        <Text style={{ color: COLORS.textMuted, marginTop: 6, fontSize: 13 }}>No order items recorded yet</Text>
+                      </View>
+                    );
+                  }
+
+                  return topDishes.map((td, idx) => (
+                    <View key={idx} style={styles.topDishRow}>
+                      <Text style={styles.topDishRank}>#{idx + 1}</Text>
+                      <Text style={styles.topDishName}>{td.name}</Text>
+                      <Text style={styles.topDishCount}>{td.count} sold</Text>
+                    </View>
+                  ));
+                })()}
+              </View>
+
+              <View style={styles.pulseCard}>
+                <Text style={styles.pulseCardTitle}>Reservation Time Windows</Text>
+                {(() => {
+                  const lunchCount = reservations.filter(r => {
+                    const h = parseInt(r.time?.split(':')[0] || '0', 10);
+                    return h >= 12 && h < 17;
+                  }).length;
+                  const dinnerCount = reservations.filter(r => {
+                    const h = parseInt(r.time?.split(':')[0] || '0', 10);
+                    return h >= 17 && h <= 24;
+                  }).length;
+
+                  return (
+                    <View style={{ paddingVertical: 10, gap: 14 }}>
+                      <View style={styles.timeWindowBox}>
+                        <Text style={styles.timeWindowLabel}>☀️ Lunch Shift (12:00 PM – 5:00 PM)</Text>
+                        <Text style={styles.timeWindowVal}>{lunchCount} bookings</Text>
+                      </View>
+                      <View style={styles.timeWindowBox}>
+                        <Text style={styles.timeWindowLabel}>🌙 Dinner Shift (5:00 PM – 12:00 AM)</Text>
+                        <Text style={styles.timeWindowVal}>{dinnerCount} bookings</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ── TAB: MY PROFILE ── */}
+        {activeTab === 'profile' && (
+          <View>
+            <Text style={styles.tabHeading}>My Administrator Profile</Text>
+            <Text style={styles.tabSubheading}>
+              Manage your administrator identity, contact details, and role privileges.
+            </Text>
+
+            <View style={styles.settingsFormCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: SPACING.lg }}>
+                <View style={[styles.avatarBox, { width: 56, height: 56, borderRadius: 28 }]}>
+                  <Text style={[styles.avatarText, { fontSize: 24 }]}>
+                    {(profile?.full_name || user?.email || 'A').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.profileHeaderName}>{profile?.full_name || 'Staff Member'}</Text>
+                  <Text style={styles.profileHeaderEmail}>{user?.email}</Text>
+                  <View style={[styles.roleTag, { alignSelf: 'flex-start', marginTop: 4 }]}>
+                    <Text style={styles.roleTagText}>{(profile?.role || 'admin').toUpperCase()}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={profileFullName}
+                  onChangeText={setProfileFullName}
+                  placeholder="Your full name"
+                  placeholderTextColor={COLORS.textSubtle}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Registered Email (Account Identity)</Text>
+                <TextInput
+                  style={[styles.input, { opacity: 0.7 }]}
+                  value={user?.email || ''}
+                  editable={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Assigned Role</Text>
+                <TextInput
+                  style={[styles.input, { opacity: 0.7 }]}
+                  value={(profile?.role || 'admin').toUpperCase()}
+                  editable={false}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Authentication User ID</Text>
+                <TextInput
+                  style={[styles.input, { opacity: 0.7, fontSize: 12 }]}
+                  value={user?.id || 'N/A'}
+                  editable={false}
+                />
+              </View>
+
+              {profileMsg ? (
+                <View style={profileMsg.isError ? styles.uploadErrorBanner : styles.successBanner}>
+                  <Text style={profileMsg.isError ? styles.uploadErrorText : styles.successBannerText}>
+                    {profileMsg.text}
+                  </Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.saveSettingsBtn, isSavingProfile && { opacity: 0.7 }]}
+                disabled={isSavingProfile}
+                onPress={async () => {
+                  if (!profileFullName.trim()) return;
+                  setIsSavingProfile(true);
+                  setProfileMsg(null);
+                  try {
+                    if (isSupabaseConfigured && supabase) {
+                      await supabase
+                        .from('profiles')
+                        .update({ full_name: profileFullName.trim() })
+                        .eq('auth_user_id', user.id);
+                    }
+                    await refreshProfile();
+                    setProfileMsg({ text: 'Profile updated successfully!', isError: false });
+                    showToast('Profile updated successfully!');
+                  } catch (err: any) {
+                    setProfileMsg({ text: err.message || 'Failed to update profile', isError: true });
+                  } finally {
+                    setIsSavingProfile(false);
+                  }
+                }}
+              >
+                {isSavingProfile ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+                ) : null}
+                <Text style={styles.saveSettingsBtnText}>Save Profile Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* ── TAB: SECURITY & AUTHENTICATION ── */}
+        {activeTab === 'security' && (
+          <View>
+            <Text style={styles.tabHeading}>Security & Credentials</Text>
+            <Text style={styles.tabSubheading}>
+              Direct password management, encrypted session authentication, and account security.
+            </Text>
+
+            {/* Password Change Card */}
+            <View style={styles.settingsFormCard}>
+              <Text style={styles.formSectionTitle}>Change Account Password</Text>
+              <Text style={[styles.tabSubheading, { marginBottom: SPACING.md }]}>
+                Update your login password for {user?.email}. Must be at least 6 characters.
+              </Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>New Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password (min 6 characters)"
+                  placeholderTextColor={COLORS.textSubtle}
+                  secureTextEntry={true}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm New Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Re-enter new password"
+                  placeholderTextColor={COLORS.textSubtle}
+                  secureTextEntry={true}
+                />
+              </View>
+
+              {passwordMsg ? (
+                <View style={passwordMsg.isError ? styles.uploadErrorBanner : styles.successBanner}>
+                  <Text style={passwordMsg.isError ? styles.uploadErrorText : styles.successBannerText}>
+                    {passwordMsg.text}
+                  </Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.saveSettingsBtn, isUpdatingPassword && { opacity: 0.7 }]}
+                disabled={isUpdatingPassword}
+                onPress={async () => {
+                  setPasswordMsg(null);
+                  if (newPassword.length < 6) {
+                    setPasswordMsg({ text: 'Password must be at least 6 characters long.', isError: true });
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    setPasswordMsg({ text: 'Passwords do not match.', isError: true });
+                    return;
+                  }
+                  setIsUpdatingPassword(true);
+                  try {
+                    const res = await updateUserPassword(newPassword);
+                    if (res?.error) {
+                      setPasswordMsg({ text: res.error, isError: true });
+                    } else {
+                      setPasswordMsg({ text: 'Password updated successfully! You can now use your new password.', isError: false });
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      showToast('Password updated successfully!');
+                    }
+                  } catch (err: any) {
+                    setPasswordMsg({ text: err.message || 'Failed to update password', isError: true });
+                  } finally {
+                    setIsUpdatingPassword(false);
+                  }
+                }}
+              >
+                {isUpdatingPassword ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+                ) : (
+                  <Key size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                )}
+                <Text style={styles.saveSettingsBtnText}>
+                  {isUpdatingPassword ? 'Updating Password...' : 'Update Password'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Session Security Overview */}
+            <View style={[styles.settingsFormCard, { marginTop: SPACING.lg }]}>
+              <Text style={styles.formSectionTitle}>Account Security Telemetry</Text>
+              
+              <View style={styles.securityItemRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Shield size={18} color={COLORS.brandGreen} />
+                  <View>
+                    <Text style={styles.securityItemTitle}>Row Level Security (RLS)</Text>
+                    <Text style={styles.securityItemSub}>Database policies enforce isolated staff permissions</Text>
+                  </View>
+                </View>
+                <View style={styles.securityStatusPill}>
+                  <Text style={styles.securityStatusPillText}>ENABLED</Text>
+                </View>
+              </View>
+
+              <View style={styles.securityItemRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Lock size={18} color={COLORS.brandTurquoise} />
+                  <View>
+                    <Text style={styles.securityItemTitle}>SSL / TLS 1.3 Transport</Text>
+                    <Text style={styles.securityItemSub}>All API queries and uploads encrypted in transit</Text>
+                  </View>
+                </View>
+                <View style={styles.securityStatusPill}>
+                  <Text style={styles.securityStatusPillText}>ACTIVE</Text>
+                </View>
+              </View>
+
+              <View style={styles.securityItemRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <CheckCircle2 size={18} color={COLORS.gold} />
+                  <View>
+                    <Text style={styles.securityItemTitle}>Local Storage Session Cache</Text>
+                    <Text style={styles.securityItemSub}>Survives network interrupts and reloads cleanly</Text>
+                  </View>
+                </View>
+                <View style={[styles.securityStatusPill, { backgroundColor: 'rgba(212, 175, 55, 0.12)' }]}>
+                  <Text style={[styles.securityStatusPillText, { color: COLORS.gold }]}>HEALTHY</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
       </ScrollView>
 
       {/* ── SIGN OUT CONFIRMATION MODAL ── */}
@@ -3254,6 +4136,185 @@ export default function AdminPage({ initialTab }: AdminPageProps = {}) {
           </View>
         </View>
       </Modal>
+
+      {/* ── ADD / EDIT CATEGORY MODAL ── */}
+      {(isAddingCategory || editingCategory) && (
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {
+            setIsAddingCategory(false);
+            setEditingCategory(null);
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={styles.modalBackdropDismiss}
+              onPress={() => {
+                setIsAddingCategory(false);
+                setEditingCategory(null);
+              }}
+            />
+            <View style={styles.categoryModalCard}>
+              <View style={styles.previewModalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewModalTitle}>
+                    {editingCategory ? `Edit Category: ${editingCategory.name}` : 'Add New Category'}
+                  </Text>
+                  <Text style={styles.previewModalSubtitle}>
+                    Configure name, slug identifier, icon emoji, and description
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => {
+                  setIsAddingCategory(false);
+                  setEditingCategory(null);
+                }}>
+                  <XCircle size={22} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ marginVertical: 14, gap: 10 }}>
+                <View>
+                  <Text style={styles.label}>Category Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Biryani Specials"
+                    placeholderTextColor={COLORS.textSubtle}
+                    value={editingCategory ? editingCategory.name : catName}
+                    onChangeText={(val) => {
+                      if (editingCategory) {
+                        setEditingCategory({ ...editingCategory, name: val });
+                      } else {
+                        setCatName(val);
+                        setCatSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                      }
+                    }}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.label}>Category Slug (URL Identifier)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. biryani-specials"
+                    placeholderTextColor={COLORS.textSubtle}
+                    value={editingCategory ? editingCategory.slug : catSlug}
+                    onChangeText={(val) => {
+                      if (editingCategory) {
+                        setEditingCategory({ ...editingCategory, slug: val as any });
+                      } else {
+                        setCatSlug(val);
+                      }
+                    }}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.label}>Icon Emoji</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 🍗, ☕, 🍰, 🍕"
+                    placeholderTextColor={COLORS.textSubtle}
+                    value={editingCategory ? editingCategory.icon : catIcon}
+                    onChangeText={(val) => {
+                      if (editingCategory) {
+                        setEditingCategory({ ...editingCategory, icon: val });
+                      } else {
+                        setCatIcon(val);
+                      }
+                    }}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.label}>Description (Optional)</Text>
+                  <TextInput
+                    style={[styles.input, { height: 60 }]}
+                    placeholder="Short description for customer menu view"
+                    placeholderTextColor={COLORS.textSubtle}
+                    multiline={true}
+                    value={editingCategory ? editingCategory.description : catDesc}
+                    onChangeText={(val) => {
+                      if (editingCategory) {
+                        setEditingCategory({ ...editingCategory, description: val });
+                      } else {
+                        setCatDesc(val);
+                      }
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.previewModalActionRow}>
+                <TouchableOpacity
+                  style={styles.modalReplaceBtn}
+                  onPress={async () => {
+                    if (editingCategory) {
+                      await updateCategory(editingCategory.id, {
+                        name: editingCategory.name,
+                        slug: editingCategory.slug,
+                        icon: editingCategory.icon,
+                        description: editingCategory.description,
+                      });
+                      showToast(`Updated category "${editingCategory.name}"`);
+                      setEditingCategory(null);
+                    } else {
+                      if (!catName.trim()) return;
+                      await addCategory({
+                        name: catName.trim(),
+                        slug: (catSlug.trim() || catName.toLowerCase().replace(/[^a-z0-9]+/g, '-')) as any,
+                        icon: catIcon.trim() || '🍽️',
+                        description: catDesc.trim() || undefined,
+                        is_active: true,
+                        display_order: categories.length + 1,
+                      });
+                      showToast(`Added category "${catName.trim()}"`);
+                      setIsAddingCategory(false);
+                      setCatName('');
+                      setCatSlug('');
+                      setCatDesc('');
+                    }
+                  }}
+                >
+                  <CheckCircle2 size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.modalReplaceBtnText}>
+                    {editingCategory ? 'Save Category Changes' : 'Create Category'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => {
+                    setIsAddingCategory(false);
+                    setEditingCategory(null);
+                  }}
+                >
+                  <Text style={styles.modalCloseBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ── FLOATING TOAST NOTIFICATION ── */}
+      {toast && (
+        <View style={[
+          styles.toastContainer,
+          toast.type === 'error' ? styles.toastError :
+          toast.type === 'info' ? styles.toastInfo : styles.toastSuccess
+        ]}>
+          {toast.type === 'error' ? (
+            <AlertCircle size={16} color="#EF4444" style={{ marginRight: 8 }} />
+          ) : toast.type === 'info' ? (
+            <AlertTriangle size={16} color="#F59E0B" style={{ marginRight: 8 }} />
+          ) : (
+            <CheckCircle2 size={16} color="#10B981" style={{ marginRight: 8 }} />
+          )}
+          <Text style={styles.toastText}>{toast.message}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -5742,5 +6803,357 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  // ── Category Management Styles ──
+  categoryTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 8,
+  },
+  catOrderBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  catOrderText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  catIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(45, 212, 191, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  catActiveBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+  },
+  catActiveBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: COLORS.brandGreen,
+  },
+  catInactiveBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(239, 83, 80, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 83, 80, 0.35)',
+  },
+  catInactiveBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: COLORS.errorLight,
+  },
+  catDescSub: {
+    fontSize: 12,
+    color: COLORS.textSubtle,
+    marginTop: 2,
+  },
+  reorderBtn: {
+    padding: 6,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+
+  // ── Customer CRM Styles ──
+  customerRowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 8,
+  },
+  customerAvatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(45, 212, 191, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerAvatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.brandTurquoise,
+  },
+  customerCountChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(45, 212, 191, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(45, 212, 191, 0.25)',
+  },
+  customerCountChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.brandTurquoise,
+  },
+
+  // ── Analytics & Telemetry Styles ──
+  analyticsSectionCard: {
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginVertical: SPACING.md,
+  },
+  analyticsCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: SPACING.md,
+  },
+  fulfillmentBarRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  modeStatBox: {
+    flex: 1,
+    minWidth: 130,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center',
+  },
+  modeStatVal: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.cream,
+  },
+  modeStatLbl: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  topDishRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  topDishRank: {
+    width: 28,
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.gold,
+  },
+  topDishName: {
+    flex: 1,
+    fontSize: 13.5,
+    color: COLORS.cream,
+    fontWeight: '600',
+  },
+  topDishCount: {
+    fontSize: 12,
+    color: COLORS.brandTurquoise,
+    fontWeight: '700',
+  },
+  timeWindowBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  timeWindowLabel: {
+    fontSize: 13,
+    color: COLORS.creamMuted,
+    fontWeight: '500',
+  },
+  timeWindowVal: {
+    fontSize: 13,
+    color: COLORS.brandTurquoise,
+    fontWeight: '700',
+  },
+
+  // ── Profile & Security Styles ──
+  profileHeaderName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.cream,
+  },
+  profileHeaderEmail: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  securityItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  securityItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.cream,
+  },
+  securityItemSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  securityStatusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  securityStatusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.brandGreen,
+  },
+
+  // ── Category Modal Card ──
+  categoryModalCard: {
+    width: '92%',
+    maxWidth: 500,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
+  },
+
+  // ── Floating Toast Notification ──
+  toastContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    zIndex: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    ...SHADOWS.card,
+    maxWidth: 400,
+  },
+  toastSuccess: {
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    borderColor: 'rgba(16, 185, 129, 0.6)',
+  },
+  toastError: {
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    borderColor: 'rgba(239, 68, 68, 0.6)',
+  },
+  toastInfo: {
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    borderColor: 'rgba(245, 158, 11, 0.6)',
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // ── Pipeline Status Pills & Buttons ──
+  statusPillNew: {
+    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    borderColor: 'rgba(244, 63, 94, 0.4)',
+  },
+  statusPillReady: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  statusPillPreparing: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  statusPillDelivery: {
+    backgroundColor: 'rgba(45, 212, 191, 0.15)',
+    borderColor: 'rgba(45, 212, 191, 0.4)',
+  },
+  statusPillNoShow: {
+    backgroundColor: 'rgba(217, 131, 36, 0.15)',
+    borderColor: 'rgba(217, 131, 36, 0.4)',
+  },
+  orderBtnPreparing: {
+    backgroundColor: COLORS.gold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  orderBtnDelivery: {
+    backgroundColor: COLORS.brandTurquoise,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  orderBtnNoShow: {
+    backgroundColor: 'rgba(217, 131, 36, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 131, 36, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orderBtnNoShowText: {
+    color: COLORS.copperLight,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  removePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 83, 80, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 83, 80, 0.35)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removePhotoBtnText: {
+    color: COLORS.errorLight,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

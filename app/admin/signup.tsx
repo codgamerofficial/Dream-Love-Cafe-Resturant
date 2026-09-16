@@ -14,7 +14,7 @@ import { AuthPageShell } from '../../src/components/auth/AuthPageShell';
 
 export default function AdminSignupPage() {
   const router = useRouter();
-  const { user, isAuthorized, loading, registerAdminAccount } = useAuth();
+  const { user, isAuthorized, loading, registerAdminAccount, loginWithPassword } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -79,16 +79,26 @@ export default function AdminSignupPage() {
       email: cleanEmail,
       password: password
     });
-    setIsSubmitting(false);
 
     if (error) {
+      setIsSubmitting(false);
       setErrorMessage(error);
     } else if (success) {
       if (sessionEstablished) {
+        setIsSubmitting(false);
         router.replace('/admin/dashboard');
       } else {
-        setIsSuccess(true);
+        // Attempt immediate login with password
+        const loginRes = await loginWithPassword(cleanEmail, password);
+        setIsSubmitting(false);
+        if (loginRes.success) {
+          router.replace('/admin/dashboard');
+        } else {
+          setIsSuccess(true);
+        }
       }
+    } else {
+      setIsSubmitting(false);
     }
   };
 

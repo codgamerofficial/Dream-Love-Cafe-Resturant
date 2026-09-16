@@ -486,3 +486,54 @@ export async function getImageVersionHistory(menuItemId: string): Promise<MenuIm
   }
   return [];
 }
+
+/**
+ * Removes custom photo for a dish, reverting to the default category fallback
+ */
+export async function removeMenuItemPhoto(menuItemId: string): Promise<boolean> {
+  try {
+    // 1. Remove from local item overrides
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.ITEM_OVERRIDES);
+    if (raw) {
+      const itemsMap: Record<string, Partial<MenuItem>> = JSON.parse(raw);
+      if (itemsMap[menuItemId]) {
+        delete itemsMap[menuItemId];
+        await AsyncStorage.setItem(STORAGE_KEYS.ITEM_OVERRIDES, JSON.stringify(itemsMap));
+      }
+    }
+
+    // 2. Remove from local images record
+    const imgRaw = await AsyncStorage.getItem(STORAGE_KEYS.MENU_IMAGES);
+    if (imgRaw) {
+      const imgMap: Record<string, MenuImageRecord> = JSON.parse(imgRaw);
+      if (imgMap[menuItemId]) {
+        delete imgMap[menuItemId];
+        await AsyncStorage.setItem(STORAGE_KEYS.MENU_IMAGES, JSON.stringify(imgMap));
+      }
+    }
+
+    // 3. Clear from Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('menu_items')
+          .update({
+            image_url: null,
+            image_type: 'mock_placeholder',
+            image_source: 'temporary_generated',
+            image_verified: false,
+            image_replacement_required: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', menuItemId);
+      } catch (err) {
+        console.warn('Remote image clear notice:', err);
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Failed to remove menu item photo:', err);
+    return false;
+  }
+}

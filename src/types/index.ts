@@ -1,27 +1,38 @@
 export type CategorySlug = 
-  | 'dream-love-special'
-  | 'salad'
-  | 'mocktail'
-  | 'shake'
-  | 'fresh-juice'
-  | 'hot-drinks'
-  | 'tandoori'
-  | 'rice-veg'
-  | 'rice-non-veg'
-  | 'bread'
   | 'soup-veg'
   | 'soup-non-veg'
   | 'starter-veg'
   | 'starter-non-veg'
-  | 'egg'
-  | 'grilled-chicken'
+  | 'tandoori'
+  | 'bread'
+  | 'rice-veg'
+  | 'rice-non-veg'
+  | 'side-dish-veg'
+  | 'side-dish-non-veg'
+  | 'side-dish-chinese-dry-veg'
+  | 'dream-love-special-side-dish'
+  | 'chopci-veg'
+  | 'chopci-non-veg'
+  | 'chowmein-veg'
+  | 'chowmein-non-veg'
+  | 'roll-veg'
+  | 'roll-non-veg'
+  | 'salad'
+  | 'rita'
+  | 'lassi'
+  | 'mocktail'
+  | 'shake'
+  | 'fresh-juice'
+  | 'hot-drinks'
+  | 'dream-love-special'
   | 'biryani'
+  | 'fried-rice'
+  | 'chopsuey'
+  | 'egg'
   | 'seafood'
   | 'mutton'
   | 'chicken'
   | 'veg-main-course'
-  | 'fried-rice'
-  | 'chopsuey'
   // Legacy slugs for backward compatibility
   | 'chef-specials'
   | 'tandoori-kebabs'
@@ -34,13 +45,14 @@ export type CategorySlug =
   | 'seafood-fish'
   | 'soups'
   | 'beverages-shakes-mocktails'
-  | 'all';
+  | 'all'
+  | (string & {});
 
 export type MenuDataQualityStatus = 'verified' | 'owner_review_required' | 'source_conflict';
 export type NormalizationStatus = 'verified' | 'owner_review_required' | 'pending_review';
 export type ImageMatchConfidence = 'high' | 'medium' | 'low';
-export type DietaryType = 'veg' | 'non-veg' | 'egg';
-export type PriceType = 'fixed' | 'portion_based' | 'size_based' | 'owner_verification_required' | 'as_per_size' | 'unpriced';
+export type DietaryType = 'veg' | 'non-veg' | 'non_veg' | 'egg' | 'neutral';
+export type PriceType = 'fixed' | 'starting_from' | 'as_per_size' | 'on_request' | 'portion_based' | 'size_based' | 'owner_verification_required' | 'unpriced';
 export type ImageType = 'real_restaurant' | 'mock_placeholder' | 'missing';
 export type ImageSource = 'owner' | 'client' | 'authorized' | 'temporary_generated' | 'uploaded' | 'external';
 export type ImageLicenseStatus = 'verified' | 'owner_provided' | 'owner_authorized' | 'licensed' | 'temporary' | 'pending_verification' | 'missing';
@@ -49,11 +61,13 @@ export interface MenuCategory {
   id: string;
   slug: CategorySlug;
   name: string;
-  description: string;
-  icon: string;
-  displayOrder: number;
+  description?: string;
+  icon?: string;
+  displayOrder?: number;
+  display_order?: number;
   image?: string;
   isActive?: boolean;
+  is_active?: boolean;
 }
 
 export interface MenuItem {
@@ -117,17 +131,21 @@ export interface MenuItem {
   isAvailable: boolean;
   is_featured?: boolean;
   isFeatured: boolean;
+  is_special?: boolean;
+  isSpecial?: boolean;
   is_vegetarian?: boolean;
   isVeg: boolean;
+  is_veg?: boolean;
   is_non_vegetarian?: boolean;
   is_egg?: boolean;
   isEgg?: boolean;
   is_spicy?: boolean;
   isSpicy?: boolean;
   dietary_type?: DietaryType;
+  diet_type?: DietaryType | string;
   
   // Metadata & Sorting
-  source?: 'Client Menu' | 'Storefront' | 'Owner Verified' | 'Online Listing';
+  source?: 'Client Menu' | 'Storefront' | 'Owner Verified' | 'Online Listing' | 'Client Menu Artwork' | string;
   sourceUrl?: string;
   dataQualityStatus?: MenuDataQualityStatus;
   displayOrder: number;
@@ -170,7 +188,7 @@ export interface Reservation {
   source?: string;
 }
 
-export type OrderStatus = 'new' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+export type OrderStatus = 'new' | 'accepted' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
 export type PaymentStatus = 'pending' | 'paid' | 'pay_on_delivery' | 'pay_at_counter';
 
 export interface DatabaseOrder {
@@ -271,6 +289,9 @@ export interface RestaurantSettings {
   reservationEnabled: boolean;
   onlineOrderingEnabled: boolean;
   deliveryEnabled: boolean;
+  deliveryRadiusKm?: number;
+  freeDeliveryRadiusKm?: number;
+  deliveryNote?: string;
   takeawayEnabled: boolean;
   dineInEnabled: boolean;
   showSampleBadges?: boolean;    // Admin toggle for subtle "Sample image" badge

@@ -28,8 +28,8 @@ export default function AdminLoginPage() {
   const [sentToEmail, setSentToEmail] = useState('');
   const [countdown, setCountdown] = useState(0);
 
-  // Password fallback mode
-  const [showPasswordMode, setShowPasswordMode] = useState(false);
+  // Direct password mode is now default
+  const [showMagicLinkMode, setShowMagicLinkMode] = useState(false);
 
   // Auto-redirect if already signed in
   useEffect(() => {
@@ -47,7 +47,33 @@ export default function AdminLoginPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Handle Send Magic Link
+  // Handle Direct Password Sign In
+  const handlePasswordLogin = async () => {
+    if (isSubmitting) return;
+    setErrorMessage('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Please enter your password.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error, success } = await loginWithPassword(cleanEmail, password);
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMessage(error);
+    } else if (success) {
+      router.replace('/admin/dashboard');
+    }
+  };
+
+  // Handle Send Magic Link (secondary fallback)
   const handleSendMagicLink = async () => {
     if (isSubmitting) return;
     setErrorMessage('');
@@ -75,50 +101,24 @@ export default function AdminLoginPage() {
     }
   };
 
-  // Handle Fallback Password Sign In
-  const handlePasswordLogin = async () => {
-    if (isSubmitting) return;
-    setErrorMessage('');
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setErrorMessage('Please enter your email address.');
-      return;
-    }
-    if (!password) {
-      setErrorMessage('Please enter your password.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const { error, success } = await loginWithPassword(cleanEmail, password);
-    setIsSubmitting(false);
-
-    if (error) {
-      setErrorMessage(error);
-    } else if (success) {
-      router.replace('/admin/dashboard');
-    }
-  };
-
   return (
     <AuthPageShell>
       <View style={styles.formContainer}>
         {/* Top Badge */}
         <View style={styles.badgeRow}>
           <View style={styles.iconCircle}>
-            <Sparkles size={18} color={COLORS.brandTurquoise} />
+            <Shield size={18} color={COLORS.brandTurquoise} />
           </View>
           <View style={styles.badgePill}>
-            <Shield size={11} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
-            <Text style={styles.badgePillText}>ADMIN PORTAL • MAGIC SIGN-IN</Text>
+            <Lock size={11} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
+            <Text style={styles.badgePillText}>ADMIN PORTAL • DIRECT SIGN-IN</Text>
           </View>
         </View>
 
         {/* Heading */}
-        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.title}>Admin Sign In</Text>
         <Text style={styles.subtitle}>
-          Sign in instantly to the Dream Love Café & Restaurant administration portal.
+          Sign in to manage the Dream Love Café & Restaurant menu, orders, reservations, and photos.
         </Text>
 
         {/* ── Magic Link Sent Confirmation View ── */}
@@ -163,12 +163,12 @@ export default function AdminLoginPage() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.changeEmailText}>Use a different email</Text>
+                <Text style={styles.changeEmailText}>Back to password login</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          /* ── Main Login Form ── */
+          /* ── Main Direct Password Login Form ── */
           <>
             {/* Email Address */}
             <View style={styles.inputGroup}>
@@ -199,14 +199,14 @@ export default function AdminLoginPage() {
                   autoComplete="email"
                   inputMode="email"
                   editable={!isSubmitting}
-                  returnKeyType={showPasswordMode ? "next" : "send"}
-                  onSubmitEditing={showPasswordMode ? undefined : handleSendMagicLink}
+                  returnKeyType={showMagicLinkMode ? "send" : "next"}
+                  onSubmitEditing={showMagicLinkMode ? handleSendMagicLink : undefined}
                 />
               </View>
             </View>
 
-            {/* Optional Password Field (if toggled) */}
-            {showPasswordMode && (
+            {/* Password Field (Default visible unless in magic link mode) */}
+            {!showMagicLinkMode && (
               <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>Password</Text>
@@ -271,7 +271,29 @@ export default function AdminLoginPage() {
             ) : null}
 
             {/* Primary Action Button */}
-            {!showPasswordMode ? (
+            {!showMagicLinkMode ? (
+              <TouchableOpacity 
+                style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+                onPress={handlePasswordLogin}
+                disabled={isSubmitting}
+                activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel="Sign In to Admin Portal"
+              >
+                {isSubmitting ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 10 }} />
+                    <Text style={styles.submitBtnText}>Signing In...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.btnContentRow}>
+                    <Lock size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.submitBtnText}>Sign In to Dashboard</Text>
+                    <ArrowRight size={17} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ) : (
               <TouchableOpacity 
                 style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
                 onPress={handleSendMagicLink}
@@ -293,48 +315,43 @@ export default function AdminLoginPage() {
                   </View>
                 )}
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-                onPress={handlePasswordLogin}
-                disabled={isSubmitting}
-                activeOpacity={0.88}
-                accessibilityRole="button"
-                accessibilityLabel="Sign In with Password"
-              >
-                {isSubmitting ? (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 10 }} />
-                    <Text style={styles.submitBtnText}>Signing In...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.btnContentRow}>
-                    <Text style={styles.submitBtnText}>Sign In with Password</Text>
-                    <ArrowRight size={17} color="#FFFFFF" style={{ marginLeft: 8 }} />
-                  </View>
-                )}
-              </TouchableOpacity>
             )}
 
-            {/* Password Fallback Toggle */}
+            {/* Sign Up Navigation */}
+            <View style={{ marginTop: SPACING.md, alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => router.push('/admin/signup')}
+                activeOpacity={0.7}
+                style={{ paddingVertical: 6 }}
+              >
+                <Text style={{ fontSize: 13, color: COLORS.creamMuted }}>
+                  Need an admin account?{' '}
+                  <Text style={{ color: COLORS.brandTurquoise, fontWeight: '700' }}>
+                    Create Account
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Magic Link Secondary Mode Toggle */}
             <View style={styles.toggleRow}>
               <TouchableOpacity 
                 style={styles.toggleBtn}
                 onPress={() => {
-                  setShowPasswordMode(!showPasswordMode);
+                  setShowMagicLinkMode(!showMagicLinkMode);
                   setErrorMessage('');
                 }}
                 activeOpacity={0.7}
               >
-                {showPasswordMode ? (
+                {showMagicLinkMode ? (
                   <View style={styles.toggleContent}>
                     <ChevronUp size={14} color={COLORS.creamMuted} style={{ marginRight: 4 }} />
-                    <Text style={styles.toggleText}>Switch back to Magic Link sign-in</Text>
+                    <Text style={styles.toggleText}>Back to Email + Password sign-in</Text>
                   </View>
                 ) : (
                   <View style={styles.toggleContent}>
-                    <ChevronDown size={14} color={COLORS.creamMuted} style={{ marginRight: 4 }} />
-                    <Text style={styles.toggleText}>Prefer to sign in with password?</Text>
+                    <Sparkles size={13} color={COLORS.creamMuted} style={{ marginRight: 6 }} />
+                    <Text style={styles.toggleText}>Send me a Magic Link instead</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -348,7 +365,7 @@ export default function AdminLoginPage() {
                 Dream Love Café & Restaurant • Contai, West Bengal
               </Text>
               <Text style={styles.securitySubnoticeText}>
-                Fast, secure sign-in via Supabase. Click the magic link in your email to open the admin panel.
+                Direct Email + Password authentication. Your session is encrypted and securely stored.
               </Text>
             </View>
           </>

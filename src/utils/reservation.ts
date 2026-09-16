@@ -333,3 +333,23 @@ export async function loadLocalReservations(): Promise<StoredLocalReservation[]>
   }
 }
 
+/**
+ * Updates status of a locally stored reservation.
+ */
+export async function updateLocalReservationStatus(idOrRef: string, newStatus: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_RESERVATIONS_STORAGE_KEY);
+    if (!raw) return;
+    const existing: StoredLocalReservation[] = JSON.parse(raw);
+    const updated = existing.map(r => {
+      if (r.reference_code === idOrRef || r.id === idOrRef) {
+        return { ...r, status: newStatus };
+      }
+      return r;
+    });
+    await AsyncStorage.setItem(LOCAL_RESERVATIONS_STORAGE_KEY, JSON.stringify(updated));
+  } catch (err) {
+    console.error('Error updating local reservation:', err);
+  }
+}
+

@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
 
 -- 2. MENU CATEGORIES TABLE
 CREATE TABLE IF NOT EXISTS public.menu_categories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     slug TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS public.menu_categories (
 
 -- 3. MENU ITEMS TABLE (Complete Schema with Image & Price Verification Metadata)
 CREATE TABLE IF NOT EXISTS public.menu_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id UUID REFERENCES public.menu_categories(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    category_id TEXT,
     category_slug TEXT REFERENCES public.menu_categories(slug) ON DELETE CASCADE,
     name TEXT NOT NULL,
     canonical_name TEXT,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.menu_items (
     subcategory TEXT,
     description TEXT,
     price NUMERIC(10,2),
-    price_type TEXT DEFAULT 'fixed' CHECK (price_type IN ('fixed', 'portion_based', 'size_based', 'owner_verification_required', 'as_per_size', 'unpriced')),
+    price_type TEXT DEFAULT 'fixed' CHECK (price_type IN ('fixed', 'portion_based', 'size_based', 'owner_verification_required', 'as_per_size', 'unpriced', 'starting_from', 'on_request')),
     price_range TEXT,
     serving_size TEXT,
     portion TEXT,
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     order_type TEXT NOT NULL CHECK (order_type IN ('dine-in', 'takeaway', 'delivery')),
     table_number TEXT,
     delivery_address TEXT,
-    status TEXT DEFAULT 'new' CHECK (status IN ('new', 'accepted', 'preparing', 'ready', 'completed', 'cancelled')),
+    status TEXT DEFAULT 'new' CHECK (status IN ('new', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'completed', 'cancelled')),
     payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'pay_on_delivery', 'pay_at_counter')),
     subtotal NUMERIC(10,2) NOT NULL DEFAULT 0.00,
     tax NUMERIC(10,2) DEFAULT 0.00,

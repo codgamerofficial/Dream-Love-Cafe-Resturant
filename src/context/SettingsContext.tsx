@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   RestaurantSettings, 
   MenuItem, 
@@ -22,28 +23,41 @@ import {
   loadLocalItemOverrides, 
   saveLocalItemOverride, 
   uploadAndSaveMenuImage,
+  removeMenuItemPhoto as removeMenuItemPhotoService,
   getImageVersionHistory,
   saveLocalImageVersion,
   saveLocalImageRecord,
   UploadProgressCallback
 } from '../services/imageUploadService';
-import { generateImageHash, generatePerceptualHash } from '../config/dishImageMap';
+import { generateImageHash, generatePerceptualHash, enhanceMenuItemWithImage } from '../config/dishImageMap';
+
+const STORAGE_KEYS = {
+  CATEGORIES: '@dream_love_menu_categories_v1',
+  SETTINGS: '@dream_love_restaurant_settings_v1',
+};
 
 interface SettingsContextType {
   settings: RestaurantSettings;
   updateSettings: (newSettings: Partial<RestaurantSettings>) => Promise<void>;
   categories: MenuCategory[];
+  addCategory: (category: Omit<MenuCategory, 'id'>) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<MenuCategory>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  reorderCategories: (orderedCategoriesOrIds: MenuCategory[] | string[]) => Promise<void>;
   menuItems: MenuItem[];
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
+  duplicateMenuItem: (id: string) => Promise<void>;
   toggleAvailability: (id: string) => Promise<void>;
   toggleFeatured: (id: string) => Promise<void>;
+  toggleSpecial: (id: string) => Promise<void>;
   uploadMenuItemPhoto: (
     menuItemId: string, 
     file: File | Blob, 
     options?: { authorName?: string; altText?: string; onProgress?: UploadProgressCallback }
   ) => Promise<{ success: boolean; imageUrl: string; imageRecord: MenuImageRecord }>;
+  removeMenuItemPhoto: (menuItemId: string) => Promise<void>;
   restoreMenuItemPhotoVersion: (menuItemId: string, version: MenuImageVersion) => Promise<void>;
   getMenuItemPhotoHistory: (menuItemId: string) => Promise<MenuImageVersion[]>;
   galleryItems: GalleryItem[];
@@ -61,17 +75,29 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<RestaurantSettings>(INITIAL_RESTAURANT_SETTINGS);
-  const [categories] = useState<MenuCategory[]>(MENU_CATEGORIES);
+  const [categories, setCategories] = useState<MenuCategory[]>(MENU_CATEGORIES);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(REAL_GALLERY_PHOTOS);
   const [verifiedReviews, setVerifiedReviews] = useState<VerifiedReview[]>(VERIFIED_REVIEWS);
   const [dataConflicts, setDataConflicts] = useState<DataConflictItem[]>(INITIAL_DATA_CONFLICTS);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── 1. Hydrate Menu Items with Local AsyncStorage Overrides on Mount ──
+  // ── 1. Hydrate Menu Items & Categories with Local AsyncStorage Overrides on Mount ──
   useEffect(() => {
     async function loadPersistedLocalData() {
       try {
+        // Load custom categories if saved
+        const localCatsRaw = await AsyncStorage.getItem(STORAGE_KEYS.CATEGORIES);
+        if (localCatsRaw) {
+          try {
+            const parsedCats = JSON.parse(localCatsRaw);
+            if (Array.isArray(parsedCats) && parsedCats.length > 0) {
+              setCategories(parsedCats);
+            }
+          } catch {}
+        }
+
+        // Load menu item overrides
         const overrides = await loadLocalItemOverrides();
         if (overrides && Object.keys(overrides).length > 0) {
           setMenuItems((prev) =>
@@ -88,7 +114,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     loadPersistedLocalData();
   }, []);
 
-  // ── 2. Fetch Remote Settings & Menu Items from Supabase ──
+  // ── 2. Fetch Remote Settings, Categories & Menu Items from Supabase ──
   const fetchRemoteData = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return;
     setIsLoading(true);
@@ -124,7 +150,23 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }));
       }
 
-      // 2b. Fetch Menu Items & Merge with Local Overrides
+      // 2b. Fetch Categories
+      const { data: dbCategories } = await supabase.from('menu_categories').select('*').order('display_order', { ascending: true });
+      if (dbCategories && dbCategories.length > 0) {
+        setCategories(dbCategories.map((c: any) => ({
+          id: c.id || `cat-${c.slug}`,
+          name: c.name,
+          slug: c.slug,
+          description: c.description || '',
+          icon: c.icon || 'Utensils',
+          displayOrder: c.display_order ?? 0,
+          display_order: c.display_order ?? 0,
+          isActive: c.is_active ?? true,
+          is_active: c.is_active ?? true,
+        })));
+      }
+
+      // 2c. Fetch Menu Items & Merge with Local Overrides
       const { data: dbMenu } = await supabase.from('menu_items').select('*').order('display_order', { ascending: true });
       const localOverrides = await loadLocalItemOverrides();
 
@@ -168,6 +210,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             is_available: item.is_available ?? true,
             isFeatured: item.is_featured ?? false,
             is_featured: item.is_featured ?? false,
+            isSpecial: item.is_special ?? false,
+            is_special: item.is_special ?? false,
             isVeg: item.is_veg ?? false,
             is_vegetarian: item.is_veg ?? false,
             is_non_vegetarian: !item.is_veg,
@@ -196,25 +240,133 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchRemoteData();
   }, [fetchRemoteData]);
 
+  // ── Settings CRUD ──
   const updateSettings = async (newSettings: Partial<RestaurantSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+    } catch {}
+
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('restaurant_settings').update({
-          phone: newSettings.phone,
-          phone_secondary: newSettings.phoneSecondary,
-          whatsapp: newSettings.whatsapp,
-          email: newSettings.email,
-          address: newSettings.address,
-          opening_hours: newSettings.openingHours,
-          price_range_for_two: newSettings.priceRangeForTwo,
-          order_instructions: newSettings.orderInstructions,
-          reservation_instructions: newSettings.reservationInstructions,
-        }).match({ id: '1' });
+        const dbFields: any = {};
+        if (newSettings.name) dbFields.name = newSettings.name;
+        if (newSettings.phone) dbFields.phone = newSettings.phone;
+        if (newSettings.phoneSecondary !== undefined) dbFields.phone_secondary = newSettings.phoneSecondary;
+        if (newSettings.whatsapp) dbFields.whatsapp = newSettings.whatsapp;
+        if (newSettings.email) dbFields.email = newSettings.email;
+        if (newSettings.address) dbFields.address = newSettings.address;
+        if (newSettings.openingHours) dbFields.opening_hours = newSettings.openingHours;
+        if (newSettings.priceRangeForTwo) dbFields.price_range_for_two = newSettings.priceRangeForTwo;
+        if (newSettings.orderInstructions) dbFields.order_instructions = newSettings.orderInstructions;
+        if (newSettings.reservationInstructions) dbFields.reservation_instructions = newSettings.reservationInstructions;
+        dbFields.updated_at = new Date().toISOString();
+
+        const { data: existing } = await supabase.from('restaurant_settings').select('id').limit(1).maybeSingle();
+        if (existing) {
+          await supabase.from('restaurant_settings').update(dbFields).eq('id', existing.id);
+        } else {
+          await supabase.from('restaurant_settings').insert([{ ...dbFields }]);
+        }
       } catch (err) {
         console.warn('Remote settings update notice:', err);
       }
     }
+  };
+
+  // ── Category Management ──
+  const addCategory = async (cat: Omit<MenuCategory, 'id'>) => {
+    const slug = (cat.slug || cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')) as any;
+    const order = cat.displayOrder ?? cat.display_order ?? (categories.length + 1);
+    const active = cat.isActive ?? cat.is_active ?? true;
+    const newCat: MenuCategory = {
+      ...cat,
+      id: `cat-${slug}`,
+      slug,
+      icon: cat.icon || 'Utensils',
+      description: cat.description || '',
+      displayOrder: order,
+      display_order: order,
+      isActive: active,
+      is_active: active,
+    };
+    const updated = [...categories, newCat];
+    setCategories(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('menu_categories').insert([{
+          name: newCat.name,
+          slug: newCat.slug,
+          display_order: order,
+          is_active: active,
+        }]);
+      } catch (err) {
+        console.warn('Remote category insert notice:', err);
+      }
+    }
+  };
+
+  const updateCategory = async (id: string, updates: Partial<MenuCategory>) => {
+    const updated = categories.map((c) => (c.id === id || c.slug === id ? { ...c, ...updates } : c));
+    setCategories(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const cat = categories.find((c) => c.id === id || c.slug === id);
+        const targetSlug = cat?.slug || id;
+        const dbFields: any = {};
+        if (updates.name !== undefined) dbFields.name = updates.name;
+        if (updates.displayOrder !== undefined) dbFields.display_order = updates.displayOrder;
+        if (updates.display_order !== undefined) dbFields.display_order = updates.display_order;
+        if (updates.isActive !== undefined) dbFields.is_active = updates.isActive;
+        if (updates.is_active !== undefined) dbFields.is_active = updates.is_active;
+        dbFields.updated_at = new Date().toISOString();
+
+        await supabase.from('menu_categories').update(dbFields).eq('slug', targetSlug);
+      } catch (err) {
+        console.warn('Remote category update notice:', err);
+      }
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    const updated = categories.filter((c) => c.id !== id && c.slug !== id);
+    setCategories(updated);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const cat = categories.find((c) => c.id === id || c.slug === id);
+        const targetSlug = cat?.slug || id;
+        await supabase.from('menu_categories').delete().eq('slug', targetSlug);
+      } catch (err) {
+        console.warn('Remote category delete notice:', err);
+      }
+    }
+  };
+
+  const reorderCategories = async (orderedCategoriesOrIds: MenuCategory[] | string[]) => {
+    if (!orderedCategoriesOrIds || orderedCategoriesOrIds.length === 0) return;
+    const isCategoryArray = typeof orderedCategoriesOrIds[0] === 'object';
+    const ids = isCategoryArray
+      ? (orderedCategoriesOrIds as MenuCategory[]).map((c) => c.id || c.slug)
+      : (orderedCategoriesOrIds as string[]);
+
+    const map = new Map(categories.map((c) => [c.id || c.slug, c]));
+    const reordered: MenuCategory[] = [];
+    ids.forEach((id, idx) => {
+      const c = map.get(id);
+      if (c) {
+        reordered.push({ ...c, displayOrder: idx + 1, display_order: idx + 1 });
+        map.delete(id);
+      }
+    });
+    map.forEach((c) => reordered.push(c));
+    setCategories(reordered);
+    await AsyncStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(reordered));
   };
 
   const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
@@ -406,6 +558,78 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const duplicateMenuItem = async (id: string) => {
+    const original = menuItems.find((i) => i.id === id);
+    if (!original) return;
+    const duplicated: MenuItem = {
+      ...original,
+      id: `m-copy-${Date.now()}`,
+      name: `${original.name} (Copy)`,
+      isAvailable: true,
+      is_available: true,
+    };
+    setMenuItems((prev) => [...prev, duplicated]);
+    await saveLocalItemOverride(duplicated.id, duplicated);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('menu_items').insert([{
+          name: duplicated.name,
+          category_slug: duplicated.category,
+          subcategory: duplicated.subcategory,
+          description: duplicated.description,
+          price: duplicated.price,
+          price_type: duplicated.priceType,
+          portion: duplicated.portion,
+          image_url: duplicated.image_url || duplicated.image,
+          is_available: true,
+          is_featured: false,
+          is_veg: duplicated.isVeg,
+          is_egg: duplicated.isEgg,
+          source: 'Admin Duplicate',
+          owner_verified: true,
+          display_order: (duplicated.displayOrder || 0) + 1,
+        }]);
+      } catch (err) {
+        console.warn('Remote duplicate notice:', err);
+      }
+    }
+  };
+
+  const toggleSpecial = async (id: string) => {
+    const item = menuItems.find((i) => i.id === id);
+    if (!item) return;
+    const newSpecial = !Boolean(item.isSpecial || item.is_special);
+    await updateMenuItem(id, { isSpecial: newSpecial, is_special: newSpecial });
+  };
+
+  const removeMenuItemPhoto = async (menuItemId: string) => {
+    await removeMenuItemPhotoService(menuItemId);
+    const item = menuItems.find((i) => i.id === menuItemId);
+    if (item) {
+      const fallbackItem = enhanceMenuItemWithImage({
+        ...item,
+        image_url: undefined,
+        image: undefined,
+        image_type: 'mock_placeholder',
+        image_verified: false,
+        image_source: 'temporary_generated',
+        image_replacement_required: true,
+      });
+      const updatedFields: Partial<MenuItem> = {
+        image: fallbackItem.image,
+        image_url: fallbackItem.image_url,
+        image_type: 'mock_placeholder',
+        image_source: 'temporary_generated',
+        image_verified: false,
+        image_replacement_required: true,
+      };
+      setMenuItems((prev) =>
+        prev.map((it) => (it.id === menuItemId ? { ...it, ...updatedFields } : it))
+      );
+    }
+  };
+
   const toggleAvailability = async (id: string) => {
     const item = menuItems.find((i) => i.id === id);
     if (!item) return;
@@ -467,13 +691,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         settings,
         updateSettings,
         categories,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        reorderCategories,
         menuItems,
         addMenuItem,
         updateMenuItem,
         deleteMenuItem,
+        duplicateMenuItem,
         toggleAvailability,
         toggleFeatured,
+        toggleSpecial,
         uploadMenuItemPhoto,
+        removeMenuItemPhoto,
         restoreMenuItemPhotoVersion,
         getMenuItemPhotoHistory,
         galleryItems,
