@@ -466,7 +466,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'linear-gradient(180deg, rgba(11,9,9,0.1) 0%, rgba(11,9,9,0.4) 50%, rgba(11,9,9,0.92) 100%)',
+    backgroundColor: 'rgba(11, 9, 9, 0.45)',
+    ...(Platform.OS === 'web'
+      ? ({
+          backgroundImage:
+            'linear-gradient(180deg, rgba(11,9,9,0.1) 0%, rgba(11,9,9,0.4) 50%, rgba(11,9,9,0.92) 100%)',
+        } as any)
+      : {}),
   } as any,
   videoBadgeIndicator: {
     position: 'absolute',

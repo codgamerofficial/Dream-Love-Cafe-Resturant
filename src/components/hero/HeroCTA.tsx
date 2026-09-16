@@ -96,8 +96,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   containerMobile: {
-    gap: 12,
-    marginTop: 28,
+    gap: 10,
+    marginTop: 18,
   },
   btnBase: {
     flexDirection: 'row',

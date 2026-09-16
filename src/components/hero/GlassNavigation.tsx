@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 30,
+    zIndex: 50,
     width: '100%',
     alignItems: 'center',
     paddingTop: Platform.OS === 'web' ? 16 : 40,

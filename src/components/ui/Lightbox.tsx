@@ -19,23 +19,21 @@ export const Lightbox: React.FC<LightboxProps> = ({
   onClose,
   onSelectIndex,
 }) => {
-  if (!isOpen || items.length === 0) return null;
-
-  const currentItem = items[currentIndex] || items[0];
-
   const handlePrev = useCallback(() => {
+    if (!items || items.length === 0) return;
     const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
     onSelectIndex(prev);
-  }, [currentIndex, items.length, onSelectIndex]);
+  }, [currentIndex, items, onSelectIndex]);
 
   const handleNext = useCallback(() => {
+    if (!items || items.length === 0) return;
     const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
     onSelectIndex(next);
-  }, [currentIndex, items.length, onSelectIndex]);
+  }, [currentIndex, items, onSelectIndex]);
 
   // Keyboard navigation for Lightbox
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !items || items.length === 0) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowLeft') handlePrev();
@@ -45,8 +43,11 @@ export const Lightbox: React.FC<LightboxProps> = ({
       window.addEventListener('keydown', handleKey);
       return () => window.removeEventListener('keydown', handleKey);
     }
-  }, [isOpen, onClose, handlePrev, handleNext]);
+  }, [isOpen, items, onClose, handlePrev, handleNext]);
 
+  if (!isOpen || !items || items.length === 0) return null;
+
+  const currentItem = items[currentIndex] || items[0];
   const isVideo = currentItem?.image_url?.endsWith('.mp4') || (currentItem as any)?.media_type === 'video';
 
   return (

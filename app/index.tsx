@@ -23,6 +23,7 @@ import {
   Users, 
   Heart, 
   CheckCircle2,
+  Check,
   ExternalLink,
   Camera,
   Calendar,
@@ -206,6 +207,18 @@ export default function HomePage() {
     setLightboxOpen(true);
   };
 
+  // Category count helper
+  const getCategoryCount = (slug: string) => {
+    if (slug === 'all') return menuItems.length;
+    return menuItems.filter((i) => i.category === slug).length;
+  };
+
+  // Curate popular categories that actually have items
+  const popularCategoryTabs = categories.filter((c) => {
+    const count = menuItems.filter((i) => i.category === c.slug).length;
+    return count > 0;
+  }).slice(0, 8);
+
   return (
     <View style={styles.container}>
       
@@ -220,28 +233,86 @@ export default function HomePage() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.ribbonScrollContent}
           >
-            <View style={styles.ribbonRow}>
-              <Text style={styles.ribbonHighlight}>MULTI-CUISINE</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonItem}>INDIAN</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonItem}>TANDOOR</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonItem}>CHINESE</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonItem}>BIRYANI</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonItem}>BEVERAGES</Text>
+            {/* Google Rating Badge */}
+            <TouchableOpacity 
+              style={styles.ribbonTrustBadge}
+              onPress={() => Linking.openURL(settings.googleReviewsUrl || settings.googleMapsUrl)}
+              activeOpacity={0.8}
+            >
+              <Star size={13} color={COLORS.gold} fill={COLORS.gold} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                Google <Text style={styles.ribbonTrustHighlight}>4.1★</Text>{' '}
+                <Text style={styles.ribbonTrustSub}>({settings.googleReviewsCount}+ Reviews)</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.ribbonDividerVertical} />
+
+            {/* Landmark Badge */}
+            <TouchableOpacity 
+              style={styles.ribbonTrustBadge}
+              onPress={handleOpenMaps}
+              activeOpacity={0.8}
+            >
+              <MapPin size={13} color={COLORS.brandTurquoise} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                Contai Landmark <Text style={styles.ribbonTrustSub}>• Opp. Jawed Habib's</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.ribbonDividerVertical} />
+
+            {/* Dishes Badge */}
+            <TouchableOpacity 
+              style={styles.ribbonTrustBadge}
+              onPress={() => router.push('/menu')}
+              activeOpacity={0.8}
+            >
+              <Utensils size={13} color={COLORS.copper} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                <Text style={styles.ribbonTrustHighlight}>134 Dishes</Text>{' '}
+                <Text style={styles.ribbonTrustSub}>• Multi-Cuisine</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.ribbonDividerVertical} />
+
+            {/* Live Tandoor Badge */}
+            <View style={styles.ribbonTrustBadge}>
+              <Flame size={13} color={COLORS.brandHeart} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                Live Clay-Oven <Text style={styles.ribbonTrustSub}>• Tandoor & Kebabs</Text>
+              </Text>
             </View>
 
             <View style={styles.ribbonDividerVertical} />
 
-            <View style={styles.ribbonDiningModes}>
-              <Text style={styles.ribbonModeText}>DINE-IN</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonModeText}>TAKEAWAY</Text>
-              <Text style={styles.ribbonDot}>•</Text>
-              <Text style={styles.ribbonModeText}>DELIVERY</Text>
+            {/* AC Dining Badge */}
+            <View style={styles.ribbonTrustBadge}>
+              <Users size={13} color={COLORS.brandTurquoise} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                AC Family Lounge <Text style={styles.ribbonTrustSub}>• Private Booths</Text>
+              </Text>
+            </View>
+
+            <View style={styles.ribbonDividerVertical} />
+
+            {/* Hours Badge */}
+            <View style={styles.ribbonTrustBadge}>
+              <Clock size={13} color={COLORS.gold} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                Daily 12 PM – 12 AM <Text style={styles.ribbonTrustSub}>• Dine-In & Delivery</Text>
+              </Text>
+            </View>
+
+            <View style={styles.ribbonDividerVertical} />
+
+            {/* Service Modes */}
+            <View style={styles.ribbonTrustBadge}>
+              <CheckCircle2 size={13} color={COLORS.vegGreen} style={styles.ribbonBadgeIcon} />
+              <Text style={styles.ribbonTrustText}>
+                Dine-In <Text style={styles.ribbonTrustSub}>• Takeaway • Delivery</Text>
+              </Text>
             </View>
           </ScrollView>
         </View>
@@ -251,62 +322,73 @@ export default function HomePage() {
       <View style={styles.sectionContainer}>
         <View style={styles.sectionInner}>
           <View style={[styles.storyGrid, !isDesktop && styles.storyGridMobile]}>
-            {/* Left: Large Authentic Photo */}
+            {/* Left: Large Authentic Photo Showcase */}
             <View style={[styles.storyImageWrapper, !isDesktop && styles.storyImageWrapperMobile]}>
               <Image
                 source={{ uri: '/photos/interior_cafe_lounge.jpg' }}
-                style={styles.storyImage}
+                style={styles.storyImage as any}
                 resizeMode="cover"
               />
-              <View style={styles.storyImageBadge}>
-                <Sparkles size={13} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
-                <Text style={styles.storyImageBadgeText}>Authentic Ambiance</Text>
+              <View style={styles.storyOverlayGradient} />
+              
+              {/* Top Landmark Tag */}
+              <View style={styles.storyTopBadge}>
+                <MapPin size={12} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
+                <Text style={styles.storyTopBadgeText}>Landmark Dining in Contai</Text>
+              </View>
+
+              {/* Bottom Pull Quote Banner */}
+              <View style={styles.storyPullQuote}>
+                <Sparkles size={13} color={COLORS.gold} style={{ marginRight: 6, flexShrink: 0 }} />
+                <Text style={styles.storyPullQuoteText}>
+                  "Where authentic tandoori smoke meets warm Contai hospitality."
+                </Text>
               </View>
             </View>
 
             {/* Right: Narrative & 3 Compact Highlights */}
             <View style={[styles.storyContent, !isDesktop && styles.storyContentMobile]}>
-              <Text style={styles.sectionEyebrow}>OUR STORY</Text>
-              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
-                A place made for{'\n'}good food & good company.
+              <Text style={styles.sectionEyebrow}>OUR STORY & PHILOSOPHY</Text>
+              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { textAlign: 'left' }]}>
+                A place made for{'\n'}good food & warm company.
               </Text>
 
               <Text style={styles.storyParagraph}>
-                Located on Contai Bypass Road opposite Jawed Habib's near the Central Bus Stand, Dream Love Cafe & Restaurant was created to provide Contai with a warm, welcoming gathering spot.
+                Located on Contai Bypass Road opposite Jawed Habib's near the Central Bus Stand, Dream Love Cafe & Restaurant was created with a clear vision: to give Contai a refined, welcoming gathering place where families, friends, and travelers feel at home.
               </Text>
               <Text style={styles.storyParagraph}>
-                From slow-cooked dum biryani and smoky clay-oven tandoori kebabs to sizzling Chinese wok favorites and refreshing iced mocktails, every dish is prepared fresh to order.
+                From aromatic dum biryani and smoky clay-oven tandoori kebabs to sizzling Indo-Chinese wok dishes and handcrafted mocktails, every preparation honors fresh ingredients, bold spices, and generous portions.
               </Text>
 
               {/* 3 Compact Editorial Highlights */}
               <View style={styles.highlightsGrid}>
                 <View style={styles.highlightItem}>
-                  <View style={styles.highlightIconBox}>
+                  <View style={[styles.highlightIconBox, { backgroundColor: 'rgba(36, 213, 197, 0.12)' }]}>
                     <Utensils size={18} color={COLORS.brandTurquoise} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.highlightTitle}>Multi-Cuisine Menu</Text>
-                    <Text style={styles.highlightDesc}>134 curated dishes spanning Indian, Chinese & café specials</Text>
+                    <Text style={styles.highlightTitle}>134 Multi-Cuisine Dishes</Text>
+                    <Text style={styles.highlightDesc}>Rich North Indian, clay-oven tandoor, Chinese wok favorites, rolls, and beverages.</Text>
                   </View>
                 </View>
 
                 <View style={styles.highlightItem}>
-                  <View style={styles.highlightIconBox}>
+                  <View style={[styles.highlightIconBox, { backgroundColor: 'rgba(217, 164, 65, 0.12)' }]}>
                     <Users size={18} color={COLORS.copper} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.highlightTitle}>Family & Friends</Text>
-                    <Text style={styles.highlightDesc}>Comfortable booth and table seating for all gatherings</Text>
+                    <Text style={styles.highlightTitle}>AC Family Dining & Private Booths</Text>
+                    <Text style={styles.highlightDesc}>Relaxed air-conditioned seating designed for family gatherings, couples, and celebrations.</Text>
                   </View>
                 </View>
 
                 <View style={styles.highlightItem}>
-                  <View style={styles.highlightIconBox}>
-                    <MapPin size={18} color={COLORS.brandHeartLight} />
+                  <View style={[styles.highlightIconBox, { backgroundColor: 'rgba(255, 45, 93, 0.12)' }]}>
+                    <Clock size={18} color={COLORS.brandHeart} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.highlightTitle}>Local Dining in Contai</Text>
-                    <Text style={styles.highlightDesc}>Opposite Jawed Habib's, open daily 12 PM to 12 AM</Text>
+                    <Text style={styles.highlightTitle}>Open Daily 12 PM – 12 AM</Text>
+                    <Text style={styles.highlightDesc}>Opposite Jawed Habib's on Contai Bypass Road with dine-in, takeaway, and delivery.</Text>
                   </View>
                 </View>
               </View>
@@ -324,16 +406,16 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* ── 3. INSIDE DREAM LOVE (Atmospheric Video Tour) ── */}
+      {/* ── 4. INSIDE DREAM LOVE (Atmospheric Video Tour) ── */}
       <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeaderCentered}>
-            <Text style={styles.sectionEyebrow}>INSIDE DREAM LOVE</Text>
+            <Text style={styles.sectionEyebrow}>AUTHENTIC RESTAURANT EXPERIENCE</Text>
             <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
-              Experience the Authentic Atmosphere
+              Inside Dream Love
             </Text>
             <Text style={styles.sectionSubtitle}>
-              Take a virtual walk-through of our dining hall, live kitchen counter, cozy booths, and vibrant Contai storefront.
+              Experience the real atmosphere: our spacious dining hall, live preparation counter, cozy private booths, and evening storefront in Contai.
             </Text>
           </View>
 
@@ -352,27 +434,33 @@ export default function HomePage() {
               >
                 <Image
                   source={{ uri: item.poster_url || item.image_url }}
-                  style={styles.insideImage}
+                  style={styles.insideImage as any}
                   resizeMode="cover"
                 />
                 <View style={styles.insideOverlay} />
 
                 {/* Big Glowing Play Badge */}
                 <View style={styles.insidePlayBadge}>
-                  <Play size={22} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
+                  <Play size={20} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 3 }} />
                 </View>
 
+                {/* Top Badge Row */}
                 <View style={styles.insideTagRow}>
                   <View style={styles.insideTag}>
-                    <Film size={11} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
-                    <Text style={styles.insideTagText}>REAL VIDEO</Text>
+                    <Film size={11} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
+                    <Text style={styles.insideTagText}>REAL VIDEO TOUR</Text>
                   </View>
                   <Text style={styles.insideCategoryText}>{item.category}</Text>
                 </View>
 
+                {/* Bottom Info Bar */}
                 <View style={styles.insideInfo}>
                   <Text style={styles.insideTitle}>{item.title}</Text>
                   <Text style={styles.insideCaption}>{item.caption}</Text>
+                  <View style={styles.insideMetaRow}>
+                    <Sparkles size={11} color={COLORS.gold} style={{ marginRight: 4 }} />
+                    <Text style={styles.insideMetaText}>Tap to Play Walkthrough (Full HD)</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}
@@ -392,50 +480,84 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* ── 4. REAL RESTAURANT GALLERY (Editorial Gallery) ── */}
+      {/* ── 5. REAL RESTAURANT GALLERY (Editorial Masonry) ── */}
       <View style={styles.sectionContainer}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeaderCentered}>
-            <Text style={styles.sectionEyebrow}>AUTHENTIC RESTAURANT GALLERY</Text>
+            <Text style={styles.sectionEyebrow}>VERIFIED STOREFRONT & INTERIOR</Text>
             <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
-              Step Inside Dream Love
+              Real Restaurant Gallery
             </Text>
             <Text style={styles.sectionSubtitle}>
-              Explore real photographs of our storefront, dining room, kitchen counter, and location in Contai.
+              True-to-life photographs captured at our Contai location. What you see is exactly what you experience.
             </Text>
           </View>
 
-          {/* Editorial Masonry Grid */}
-          <View style={[styles.photoGrid, !isDesktop && styles.photoGridMobile]}>
-            {realPhotos.map((photo, idx) => (
+          {/* Asymmetrical Editorial Grid */}
+          <View style={styles.editorialGalleryContainer}>
+            {/* Top Row: Large Featured Showcase Card (Storefront & Neon Signboard) */}
+            {realPhotos[0] && (
               <TouchableOpacity
-                key={photo.id}
-                style={[
-                  styles.photoCard,
-                  isDesktop && styles.photoCardDesktop,
-                  !isDesktop && styles.photoCardMobileFull,
-                ]}
-                onPress={() => openMediaLightbox(insideVideos.length + idx)}
-                activeOpacity={0.9}
+                key={realPhotos[0].id}
+                style={[styles.galleryHeroCard, !isDesktop && styles.galleryHeroCardMobile]}
+                onPress={() => openMediaLightbox(insideVideos.length)}
+                activeOpacity={0.92}
               >
                 <Image
-                  source={{ uri: photo.image_url }}
-                  style={styles.photoImage}
+                  source={{ uri: realPhotos[0].image_url }}
+                  style={styles.photoImage as any}
                   resizeMode="cover"
                 />
-                <View style={styles.photoOverlay} />
-                
-                <View style={styles.photoInfo}>
-                  <Text style={styles.photoCategoryBadge}>{photo.category}</Text>
-                  <Text style={styles.photoTitle}>{photo.title}</Text>
-                  <Text style={styles.photoSubtitle}>{photo.caption}</Text>
+                <View style={styles.galleryHeroOverlay} />
+
+                <View style={styles.galleryHeroTopBadge}>
+                  <Sparkles size={12} color={COLORS.gold} style={{ marginRight: 5 }} />
+                  <Text style={styles.galleryHeroBadgeText}>FEATURED STOREFRONT • NIGHT AMBIENCE</Text>
+                </View>
+
+                <View style={styles.galleryHeroInfo}>
+                  <Text style={styles.galleryHeroTitle}>{realPhotos[0].title}</Text>
+                  <Text style={styles.galleryHeroSubtitle}>{realPhotos[0].caption}</Text>
                 </View>
 
                 <View style={styles.photoZoomIcon}>
-                  <Maximize2 size={14} color={COLORS.cream} />
+                  <Maximize2 size={15} color={COLORS.cream} />
                 </View>
               </TouchableOpacity>
-            ))}
+            )}
+
+            {/* Bottom Row: 3 Supporting High-Def Cards */}
+            <View style={[styles.gallerySupportingGrid, !isDesktop && styles.gallerySupportingGridMobile]}>
+              {realPhotos.slice(1).map((photo, idx) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={[
+                    styles.supportingPhotoCard,
+                    isDesktop && styles.supportingPhotoCardDesktop,
+                    !isDesktop && styles.supportingPhotoCardMobile,
+                  ]}
+                  onPress={() => openMediaLightbox(insideVideos.length + 1 + idx)}
+                  activeOpacity={0.9}
+                >
+                  <Image
+                    source={{ uri: photo.image_url }}
+                    style={styles.photoImage as any}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.photoOverlay} />
+                  
+                  <View style={styles.photoInfo}>
+                    <Text style={styles.photoCategoryBadge}>{photo.category}</Text>
+                    <Text style={styles.photoTitle}>{photo.title}</Text>
+                    <Text style={styles.photoSubtitle}>{photo.caption}</Text>
+                  </View>
+
+                  <View style={styles.photoZoomIcon}>
+                    <Maximize2 size={13} color={COLORS.cream} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.galleryActionRow}>
@@ -445,25 +567,41 @@ export default function HomePage() {
               activeOpacity={0.85}
             >
               <Camera size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
-              <Text style={styles.viewFullGalleryBtnText}>View Complete Photo & Video Gallery</Text>
+              <Text style={styles.viewFullGalleryBtnText}>View Complete Photo & Video Gallery (12 Items)</Text>
               <ArrowRight size={14} color={COLORS.cream} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* ── 5. EXPLORE THE MENU SECTION (Discovery) ── */}
+      {/* ── 6. EXPLORE THE MENU SECTION (Discovery) ── */}
       <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.menuSectionHeaderRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sectionEyebrow}>CULINARY VARIETY</Text>
-              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
+            <View style={{ flex: 1, minWidth: 260 }}>
+              <Text style={styles.sectionEyebrow}>CULINARY DISCOVERY</Text>
+              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { textAlign: 'left' }]}>
                 Explore the Menu
               </Text>
               <Text style={styles.sectionSubtitleLeft}>
-                From tandoor favourites and biryani to Chinese dishes, mocktails, shakes, and café beverages.
+                134 authentic recipes prepared fresh to order. From royal dum biryani and smoky tandoor to Chinese wok and iced mocktails.
               </Text>
+
+              {/* Dietary & Freshness Micro-Indicators */}
+              <View style={styles.menuDietaryStrip}>
+                <View style={styles.menuDietaryItem}>
+                  <View style={[styles.menuDietaryDot, { backgroundColor: COLORS.vegGreen }]} />
+                  <Text style={styles.menuDietaryText}>Pure Vegetarian Options</Text>
+                </View>
+                <View style={styles.menuDietaryItem}>
+                  <View style={[styles.menuDietaryDot, { backgroundColor: COLORS.brandHeart }]} />
+                  <Text style={styles.menuDietaryText}>Non-Veg Specialties</Text>
+                </View>
+                <View style={styles.menuDietaryItem}>
+                  <Flame size={12} color={COLORS.copper} style={{ marginRight: 4 }} />
+                  <Text style={styles.menuDietaryText}>Live Clay-Oven Tandoor</Text>
+                </View>
+              </View>
             </View>
 
             <View style={styles.menuHeaderActions}>
@@ -487,7 +625,7 @@ export default function HomePage() {
             </View>
           </View>
 
-          {/* Category Tabs */}
+          {/* Category Tabs with Dish Counts */}
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -501,10 +639,16 @@ export default function HomePage() {
               <Text style={[styles.categoryPillText, selectedHomeCat === 'all' && styles.categoryPillTextActive]}>
                 Featured & Popular
               </Text>
+              <View style={[styles.categoryCountBadge, selectedHomeCat === 'all' && styles.categoryCountBadgeActive]}>
+                <Text style={[styles.categoryCountText, selectedHomeCat === 'all' && styles.categoryCountTextActive]}>
+                  {menuItems.filter((i) => i.isFeatured || i.image_url || i.image).length}
+                </Text>
+              </View>
             </TouchableOpacity>
 
-            {categories.slice(0, 7).map((cat) => {
+            {popularCategoryTabs.map((cat) => {
               const active = selectedHomeCat === cat.slug;
+              const count = getCategoryCount(cat.slug);
               return (
                 <TouchableOpacity
                   key={cat.id}
@@ -515,6 +659,13 @@ export default function HomePage() {
                   <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>
                     {cat.name}
                   </Text>
+                  {count > 0 && (
+                    <View style={[styles.categoryCountBadge, active && styles.categoryCountBadgeActive]}>
+                      <Text style={[styles.categoryCountText, active && styles.categoryCountTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -560,9 +711,9 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* ── 6. FEATURED DISHES ("What People Come For") ── */}
+      {/* ── 7. FEATURED DISHES ("What People Come For") ── */}
       {heroFeaturedItem && (
-        <View style={[styles.sectionContainer, styles.sectionAlt]}>
+        <View style={styles.sectionContainer}>
           <View style={styles.sectionInner}>
             <View style={styles.sectionHeaderCentered}>
               <Text style={styles.sectionEyebrow}>CHEF'S SIGNATURE SELECTION</Text>
@@ -570,17 +721,21 @@ export default function HomePage() {
                 What People Come For
               </Text>
               <Text style={styles.sectionSubtitle}>
-                Hand-picked dishes loved by our local diners in Contai for their authentic taste and generous portions.
+                Hand-picked dishes loved by our local diners in Contai for their authentic taste, fragrant spices, and generous portions.
               </Text>
             </View>
 
             <View style={[styles.featuredDishesContainer, !isDesktop && styles.featuredDishesMobile]}>
-              {/* Left: 1 Large Hero Dish */}
+              {/* Left: 1 Large Hero Dish with Gold Ribbon Banner */}
               <View style={[styles.heroDishCard, isDesktop ? { flex: 1.2 } : { width: '100%' }]}>
+                <View style={styles.heroDishBanner}>
+                  <Sparkles size={13} color={COLORS.gold} style={{ marginRight: 6 }} />
+                  <Text style={styles.heroDishBannerText}>CHEF'S SIGNATURE • MOST POPULAR</Text>
+                </View>
                 <MenuCard item={heroFeaturedItem} variant={isDesktop ? 'hero' : 'standard'} />
               </View>
 
-              {/* Right: 4 Supporting Cards in Grid */}
+              {/* Right: 4 Supporting Cards in 2x2 Grid */}
               <View style={[styles.supportingGrid, isDesktop ? { flex: 1.8 } : { width: '100%' }]}>
                 {supportingFeaturedItems.map((item) => (
                   <View 
@@ -600,43 +755,63 @@ export default function HomePage() {
         </View>
       )}
 
-      {/* ── 7. VERIFIED REVIEWS SECTION ── */}
-      <View style={styles.sectionContainer}>
+      {/* ── 8. VERIFIED REVIEWS SECTION ── */}
+      <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeaderCentered}>
-            <Text style={styles.sectionEyebrow}>VERIFIED GUEST FEEDBACK</Text>
+            <Text style={styles.sectionEyebrow}>AUTHENTIC REPUTATION</Text>
             <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
               Loved by Food Lovers in Contai
             </Text>
             <Text style={styles.sectionSubtitle}>
-              Authentic dining reviews directly linked to official Google, Justdial, and Magicpin listings.
+              Authentic dining feedback from Google Maps, Justdial, and Magicpin. Real reviews from local Contai residents and highway travelers.
             </Text>
           </View>
 
           {/* Rating Summary Strip */}
           <View style={styles.ratingsSummaryStrip}>
-            <View style={styles.ratingSummaryBadge}>
-              <Star size={16} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 6 }} />
+            <TouchableOpacity 
+              style={styles.ratingSummaryBadge}
+              onPress={() => Linking.openURL(settings.googleReviewsUrl || settings.googleMapsUrl)}
+              activeOpacity={0.8}
+            >
+              <Star size={15} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 6 }} />
               <Text style={styles.ratingSummarySource}>Google Maps</Text>
               <Text style={styles.ratingSummaryScore}>★ {settings.googleRating}</Text>
               <Text style={styles.ratingSummaryCount}>({settings.googleReviewsCount}+ Reviews)</Text>
-            </View>
+              <ExternalLink size={12} color={COLORS.textSubtle} style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
 
             {settings.justdialUrl && (
-              <View style={styles.ratingSummaryBadge}>
-                <ShieldCheck size={16} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+              <TouchableOpacity 
+                style={styles.ratingSummaryBadge}
+                onPress={() => Linking.openURL(settings.justdialUrl)}
+                activeOpacity={0.8}
+              >
+                <ShieldCheck size={15} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
                 <Text style={styles.ratingSummarySource}>Justdial</Text>
                 <Text style={styles.ratingSummaryScore}>★ {settings.justdialRating || '4.0'}</Text>
-              </View>
+                <ExternalLink size={12} color={COLORS.textSubtle} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
             )}
 
             {settings.magicpinUrl && (
-              <View style={styles.ratingSummaryBadge}>
-                <ShieldCheck size={16} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+              <TouchableOpacity 
+                style={styles.ratingSummaryBadge}
+                onPress={() => Linking.openURL(settings.magicpinUrl)}
+                activeOpacity={0.8}
+              >
+                <ShieldCheck size={15} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
                 <Text style={styles.ratingSummarySource}>Magicpin</Text>
                 <Text style={styles.ratingSummaryScore}>★ {settings.magicpinRating || '4.1'}</Text>
-              </View>
+                <ExternalLink size={12} color={COLORS.textSubtle} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
             )}
+
+            <View style={styles.ratingTrustTag}>
+              <CheckCircle2 size={13} color={COLORS.vegGreen} style={{ marginRight: 5 }} />
+              <Text style={styles.ratingTrustTagText}>100% Genuine Verified Diners</Text>
+            </View>
           </View>
 
           {/* 3 Review Cards */}
@@ -650,9 +825,11 @@ export default function HomePage() {
                   !isDesktop && styles.homeReviewCardMobile
                 ]}
                 onPress={() => Linking.openURL(rev.externalReviewUrl)}
-                activeOpacity={0.85}
+                activeOpacity={0.88}
               >
+                {/* Decorative Quotation Mark & Stars */}
                 <View style={styles.reviewCardTop}>
+                  <Text style={styles.reviewQuoteSymbol}>“</Text>
                   <View style={styles.starCluster}>
                     {Array.from({ length: rev.rating }).map((_, i) => (
                       <Star key={i} size={14} color={COLORS.gold} fill={COLORS.gold} style={{ marginRight: 2 }} />
@@ -665,11 +842,23 @@ export default function HomePage() {
 
                 <Text style={styles.reviewQuoteText}>"{rev.reviewText}"</Text>
 
+                {/* Author & Verification Row */}
                 <View style={styles.reviewCardAuthorRow}>
-                  <Text style={styles.reviewAuthorName}>{rev.reviewerName}</Text>
+                  <View style={styles.reviewAuthorGroup}>
+                    <View style={styles.reviewAvatarCircle}>
+                      <Text style={styles.reviewAvatarInitial}>
+                        {rev.reviewerName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={styles.reviewAuthorName}>{rev.reviewerName}</Text>
+                      <Text style={styles.reviewAuthorTag}>Local Contai Diner</Text>
+                    </View>
+                  </View>
                   <View style={styles.reviewSourceLink}>
+                    <ShieldCheck size={13} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
                     <Text style={styles.reviewSourceLinkText}>Verified</Text>
-                    <ExternalLink size={11} color={COLORS.brandTurquoise} style={{ marginLeft: 4 }} />
+                    <ExternalLink size={11} color={COLORS.brandTurquoise} style={{ marginLeft: 3 }} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -682,15 +871,15 @@ export default function HomePage() {
               onPress={() => router.push('/reviews')}
               activeOpacity={0.8}
             >
-              <Text style={styles.viewAllReviewsBtnText}>Read All Verified Reviews</Text>
+              <Text style={styles.viewAllReviewsBtnText}>Read All Verified Reviews ({settings.googleReviewsCount}+)</Text>
               <ArrowRight size={14} color={COLORS.brandTurquoise} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* ── 8. VISIT & LOCATION SECTION ── */}
-      <View style={[styles.sectionContainer, styles.sectionAlt]}>
+      {/* ── 9. VISIT & LOCATION SECTION ── */}
+      <View style={styles.sectionContainer}>
         <View style={styles.sectionInner}>
           <View style={[styles.visitSplitGrid, !isDesktop && styles.visitSplitGridMobile]}>
             {/* Left: Google Map Embed */}
@@ -700,7 +889,7 @@ export default function HomePage() {
                   src="https://maps.google.com/maps?q=Dream%20Love%20Cafe%20%26%20Restaurant%2C%20QPHM%2B8QV%2C%20Contai%2C%20West%20Bengal%20721404%2C%20India&t=&z=17&ie=UTF8&iwloc=&output=embed"
                   width="100%"
                   height="100%"
-                  style={{ border: 0, borderRadius: 20, minHeight: 320 } as any}
+                  style={{ border: 0, borderRadius: 20, minHeight: 340, width: '100%', height: '100%' } as any}
                   allowFullScreen
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
@@ -715,12 +904,26 @@ export default function HomePage() {
               )}
             </View>
 
-            {/* Right: Location Details & Quick Actions */}
+            {/* Right: Concierge Information & Live Status */}
             <View style={[styles.visitInfoContent, !isDesktop && styles.visitInfoContentMobile]}>
+              {/* Live Status Badge */}
+              <View style={styles.liveOpenBadge}>
+                <View style={styles.liveOpenDot} />
+                <Text style={styles.liveOpenText}>OPEN TODAY • 12:00 PM – 12:00 AM</Text>
+              </View>
+
               <Text style={styles.sectionEyebrow}>LOCATION & DIRECTIONS</Text>
-              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
+              <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile, { textAlign: 'left' }]}>
                 Visit Us in Contai
               </Text>
+
+              {/* Landmark Callout */}
+              <View style={styles.visitLandmarkBox}>
+                <Sparkles size={14} color={COLORS.copper} style={{ marginRight: 8, marginTop: 2, flexShrink: 0 }} />
+                <Text style={styles.visitLandmarkText}>
+                  <Text style={{ fontWeight: '700', color: COLORS.cream }}>Prime Landmark:</Text> Directly opposite Jawed Habib's Hair & Beauty Salon, near Central Bus Stand on Contai Bypass Road.
+                </Text>
+              </View>
 
               <View style={styles.visitInfoRows}>
                 <View style={styles.visitInfoItem}>
@@ -737,8 +940,9 @@ export default function HomePage() {
                 <View style={styles.visitInfoItem}>
                   <Clock size={18} color={COLORS.brandTurquoise} style={styles.visitIcon} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.visitItemLabel}>Hours</Text>
-                    <Text style={styles.visitItemValue}>{settings.openingHours}</Text>
+                    <Text style={styles.visitItemLabel}>Opening Hours</Text>
+                    <Text style={styles.visitItemValue}>{settings.openingHours} (Monday – Sunday)</Text>
+                    <Text style={styles.visitSubNote}>Dine-in, takeaway counters, and local food delivery</Text>
                   </View>
                 </View>
 
@@ -747,6 +951,7 @@ export default function HomePage() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.visitItemLabel}>Phone & WhatsApp</Text>
                     <Text style={styles.visitItemValue}>{settings.phone}</Text>
+                    <Text style={styles.visitSubNote}>Call ahead for fast takeaway orders or table inquiries</Text>
                   </View>
                 </View>
               </View>
@@ -758,15 +963,25 @@ export default function HomePage() {
                   activeOpacity={0.85}
                 >
                   <MapPin size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.visitPrimaryBtnText}>Get Directions</Text>
+                  <Text style={styles.visitPrimaryBtnText}>Get Directions on Google Maps</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={styles.visitSecondaryBtn}
-                  onPress={() => router.push('/visit')}
+                  onPress={() => Linking.openURL(`tel:${settings.phone.replace(/[^0-9+]/g, '')}`)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.visitSecondaryBtnText}>View Details</Text>
+                  <Phone size={14} color={COLORS.cream} style={{ marginRight: 6 }} />
+                  <Text style={styles.visitSecondaryBtnText}>Call Now</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.visitWhatsAppBtn}
+                  onPress={() => Linking.openURL(`https://wa.me/919734471490?text=${encodeURIComponent('Hello Dream Love Cafe, I would like to inquire about dining.')}`)}
+                  activeOpacity={0.85}
+                >
+                  <MessageSquare size={14} color={COLORS.brandTurquoise} style={{ marginRight: 6 }} />
+                  <Text style={styles.visitWhatsAppBtnText}>WhatsApp</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -774,20 +989,41 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* ── 9. INVITATION RESERVATION BANNER ── */}
-      <View style={styles.sectionContainer}>
+      {/* ── 10. INVITATION RESERVATION BANNER ── */}
+      <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.reserveBannerCard}>
             <View style={styles.reserveBannerIcon}>
               <Heart size={24} color={COLORS.brandHeart} fill={COLORS.brandHeart} />
             </View>
 
+            <Text style={styles.reserveBannerEyebrow}>FAMILY DINING & PRIVATE BOOTHS</Text>
             <Text style={styles.reserveBannerTitle}>
               Reserve Your Table at Dream Love
             </Text>
             <Text style={styles.reserveBannerSub}>
-              Planning a family meal, evening coffee, or birthday gathering? Reserve your table in advance for instant preparation.
+              Planning a family dinner, anniversary celebration, or evening coffee with friends? Reserve your table in advance for seamless hospitality and prompt preparation.
             </Text>
+
+            {/* Reassurance Checklist Strip */}
+            <View style={styles.reservePerksRow}>
+              <View style={styles.reservePerkItem}>
+                <Check size={14} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
+                <Text style={styles.reservePerkText}>Instant WhatsApp Confirmation</Text>
+              </View>
+              <View style={styles.reservePerkItem}>
+                <Check size={14} color={COLORS.brandTurquoise} style={{ marginRight: 5 }} />
+                <Text style={styles.reservePerkText}>Zero Booking Fees</Text>
+              </View>
+              <View style={styles.reservePerkItem}>
+                <Check size={14} color={COLORS.gold} style={{ marginRight: 5 }} />
+                <Text style={styles.reservePerkText}>Birthday & Party Decor on Request</Text>
+              </View>
+              <View style={styles.reservePerkItem}>
+                <Check size={14} color={COLORS.brandHeart} style={{ marginRight: 5 }} />
+                <Text style={styles.reservePerkText}>Fresh Clay-Oven Cooking</Text>
+              </View>
+            </View>
 
             <View style={styles.reserveBannerActions}>
               <TouchableOpacity
@@ -805,7 +1041,7 @@ export default function HomePage() {
                 activeOpacity={0.8}
               >
                 <Phone size={15} color={COLORS.cream} style={{ marginRight: 6 }} />
-                <Text style={styles.bannerCallBtnText}>Call {settings.phone}</Text>
+                <Text style={styles.bannerCallBtnText}>Call: {settings.phone}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -836,211 +1072,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  // ── 1. CINEMATIC HERO ──
-  heroSection: {
-    position: 'relative',
-    minHeight: 580,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: SPACING.xxl,
-    paddingHorizontal: SPACING.lg,
-    overflow: 'hidden',
-    backgroundColor: COLORS.backgroundDeep,
-  },
-  heroSectionMobile: {
-    minHeight: 480,
-    paddingVertical: SPACING.xl,
-    paddingHorizontal: SPACING.md,
-  },
-  heroBackgroundImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(14, 11, 10, 0.78)',
-  },
-  heroContent: {
-    maxWidth: 880,
-    width: '100%',
-    alignItems: 'center',
-    textAlign: 'center',
-    zIndex: 2,
-  },
-  heroEyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    gap: 12,
-  },
-  pulseLineLeft: {
-    width: 28,
-    height: 2,
-    backgroundColor: COLORS.brandTurquoise,
-    borderRadius: 1,
-  },
-  pulseLineRight: {
-    width: 28,
-    height: 2,
-    backgroundColor: COLORS.brandTurquoise,
-    borderRadius: 1,
-  },
-  heroEyebrow: {
-    color: COLORS.brandTurquoise,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  heroTitle: {
-    fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 56,
-    fontWeight: '800',
-    color: COLORS.cream,
-    textAlign: 'center',
-    lineHeight: 66,
-    letterSpacing: -0.5,
-    marginBottom: SPACING.lg,
-  },
-  heroTitleTablet: {
-    fontSize: 46,
-    lineHeight: 54,
-  },
-  heroTitleMobile: {
-    fontSize: 34,
-    lineHeight: 42,
-  },
-  heroTitleSmallMobile: {
-    fontSize: 28,
-    lineHeight: 36,
-  },
-  heroSubtitle: {
-    fontSize: 15.5,
-    color: COLORS.creamMuted,
-    textAlign: 'center',
-    maxWidth: 680,
-    lineHeight: 24,
-    marginBottom: SPACING.xl,
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  heroSubtitleMobile: {
-    fontSize: 13.5,
-    lineHeight: 21,
-    marginBottom: SPACING.lg,
-  },
-  heroCtaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    marginBottom: SPACING.xl,
-    flexWrap: 'wrap',
-  },
-  heroCtaContainerMobile: {
-    flexDirection: 'column',
-    width: '100%',
-    gap: 10,
-  },
-  heroBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 24,
-    borderRadius: BORDER_RADIUS.md,
-    minHeight: 48,
-  },
-  heroBtnFullWidth: {
-    width: '100%',
-  },
-  heroPrimaryBtn: {
-    backgroundColor: COLORS.brandHeart,
-    shadowColor: COLORS.brandHeart,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.40,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  heroPrimaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  heroSecondaryBtn: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderWidth: 1,
-    borderColor: COLORS.brandTurquoise,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.30,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  heroSecondaryBtnText: {
-    color: COLORS.cream,
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  heroTextLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  heroTextLinkContent: {
-    color: COLORS.copperLight,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  heroTrustStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(26, 22, 21, 0.88)',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  trustItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  trustItemText: {
-    color: COLORS.creamMuted,
-    fontSize: 12.5,
-    fontWeight: '500',
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-  },
-  trustDivider: {
-    color: COLORS.textSubtle,
-    fontSize: 12,
-  },
-
   // ── 2. QUICK TRUST & CUISINE RIBBON ──
   ribbonSection: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(23, 19, 18, 0.90)',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
     paddingVertical: 12,
     width: '100%',
   },
@@ -1053,62 +1091,57 @@ const styles = StyleSheet.create({
   ribbonScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     minWidth: '100%',
-    gap: 16,
+    gap: 14,
+    paddingVertical: 2,
   },
-  ribbonRow: {
+  ribbonTrustBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: 'rgba(33, 27, 25, 0.65)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 6,
   },
-  ribbonHighlight: {
-    color: COLORS.brandTurquoise,
-    fontSize: 11.5,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+  ribbonBadgeIcon: {
+    flexShrink: 0,
+  },
+  ribbonTrustText: {
+    color: COLORS.cream,
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-  ribbonDot: {
-    color: COLORS.borderLight,
-    fontSize: 12,
+  ribbonTrustHighlight: {
+    color: COLORS.brandTurquoise,
+    fontWeight: '700',
   },
-  ribbonItem: {
+  ribbonTrustSub: {
     color: COLORS.creamMuted,
     fontSize: 11.5,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    fontFamily: TYPOGRAPHY.fontFamilySans,
+    fontWeight: '400',
   },
   ribbonDividerVertical: {
     width: 1,
     height: 16,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 4,
-  },
-  ribbonDiningModes: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ribbonModeText: {
-    color: COLORS.copperLight,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    fontFamily: TYPOGRAPHY.fontFamilySans,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    marginHorizontal: 2,
   },
 
   // ── GENERAL SECTION LAYOUT ──
   sectionContainer: {
     width: '100%',
-    paddingVertical: SPACING.xxl,
+    paddingVertical: 56,
   },
   sectionAlt: {
-    backgroundColor: COLORS.surfaceMuted,
+    backgroundColor: 'rgba(23, 19, 18, 0.55)',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   sectionInner: {
     maxWidth: LAYOUT.maxContainerWidth,
@@ -1118,16 +1151,16 @@ const styles = StyleSheet.create({
   },
   sectionHeaderCentered: {
     alignItems: 'center',
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: 36,
+    width: '100%',
   },
   sectionEyebrow: {
     color: COLORS.copper,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
-    letterSpacing: 2.5,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 8,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   sectionTitle: {
@@ -1137,8 +1170,8 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
     lineHeight: 44,
     letterSpacing: -0.3,
-    marginBottom: 8,
-    textAlign: 'left',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   sectionTitleMobile: {
     fontSize: 26,
@@ -1146,15 +1179,15 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 14.5,
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     textAlign: 'center',
-    maxWidth: 620,
+    maxWidth: 640,
     lineHeight: 22,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   sectionSubtitleLeft: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     maxWidth: 540,
     lineHeight: 21,
     marginTop: 4,
@@ -1165,50 +1198,85 @@ const styles = StyleSheet.create({
   storyGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 40,
+    gap: 44,
     width: '100%',
   },
   storyGridMobile: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 24,
+    gap: 28,
   },
   storyImageWrapper: {
     flex: 1,
-    height: 400,
-    borderRadius: BORDER_RADIUS.hero,
+    height: 420,
+    borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
     position: 'relative',
-    ...SHADOWS.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 8,
   },
   storyImageWrapperMobile: {
     width: '100%',
-    height: 250,
+    height: 260,
   },
   storyImage: {
     width: '100%',
     height: '100%',
   },
-  storyImageBadge: {
+  storyOverlayGradient: {
     position: 'absolute',
-    bottom: 14,
-    left: 14,
-    backgroundColor: 'rgba(18, 15, 14, 0.88)',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: BORDER_RADIUS.sm,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(11, 9, 9, 0.25)',
+  },
+  storyTopBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(18, 15, 14, 0.90)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.full,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: 'rgba(36, 213, 197, 0.35)',
   },
-  storyImageBadgeText: {
+  storyTopBadgeText: {
     color: COLORS.cream,
     fontSize: 11.5,
-    fontWeight: '600',
+    fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  storyPullQuote: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(18, 15, 14, 0.92)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.35)',
+  },
+  storyPullQuoteText: {
+    color: COLORS.cream,
+    fontSize: 12.5,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+    flex: 1,
   },
   storyContent: {
     flex: 1.15,
@@ -1220,66 +1288,65 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: COLORS.creamMuted,
     lineHeight: 23,
-    marginBottom: 12,
+    marginBottom: 14,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   highlightsGrid: {
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.md,
-    gap: 10,
+    marginTop: 8,
+    marginBottom: 18,
+    gap: 12,
     width: '100%',
   },
   highlightItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderRadius: BORDER_RADIUS.md,
+    gap: 14,
+    backgroundColor: 'rgba(33, 27, 25, 0.70)',
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     width: '100%',
   },
   highlightIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceElevated,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   highlightTitle: {
     color: COLORS.cream,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 3,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   highlightDesc: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
+    color: COLORS.creamMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   storyReadMoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   storyReadMoreText: {
     color: COLORS.brandTurquoise,
-    fontSize: 13.5,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── 3. INSIDE DREAM LOVE (Video Highlights) ──
+  // ── 4. INSIDE DREAM LOVE (Video Highlights) ──
   insideGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 18,
-    marginBottom: SPACING.xl,
+    gap: 20,
+    marginBottom: 28,
     width: '100%',
   },
   insideGridMobile: {
@@ -1288,17 +1355,21 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   insideCard: {
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
     backgroundColor: COLORS.surface,
-    ...SHADOWS.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 5,
   },
   insideCardDesktop: {
     width: '48.5%',
-    height: 270,
+    height: 280,
   },
   insideCardMobile: {
     width: '100%',
@@ -1314,22 +1385,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(11, 9, 9, 0.45)',
+    backgroundColor: 'rgba(11, 9, 9, 0.42)',
   },
   insidePlayBadge: {
     position: 'absolute',
-    top: '40%',
+    top: '38%',
     left: '50%',
     transform: [{ translateX: -26 }, { translateY: -26 }],
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(233, 30, 69, 0.90)',
+    backgroundColor: 'rgba(233, 30, 69, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    ...SHADOWS.glow,
+    shadowColor: '#FF2D5D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
   },
   insideTagRow: {
     position: 'absolute',
@@ -1343,12 +1418,12 @@ const styles = StyleSheet.create({
   insideTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(11, 9, 9, 0.75)',
+    backgroundColor: 'rgba(11, 9, 9, 0.82)',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
-    borderColor: 'rgba(36, 213, 197, 0.4)',
+    borderColor: 'rgba(36, 213, 197, 0.45)',
   },
   insideTagText: {
     color: COLORS.brandTurquoise,
@@ -1360,10 +1435,10 @@ const styles = StyleSheet.create({
   insideCategoryText: {
     color: COLORS.creamMuted,
     fontSize: 11,
-    fontWeight: '600',
-    backgroundColor: 'rgba(11, 9, 9, 0.65)',
+    fontWeight: '700',
+    backgroundColor: 'rgba(11, 9, 9, 0.75)',
     paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     borderRadius: BORDER_RADIUS.sm,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
@@ -1372,18 +1447,34 @@ const styles = StyleSheet.create({
     bottom: 14,
     left: 14,
     right: 14,
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   insideTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: COLORS.cream,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   insideCaption: {
     fontSize: 12,
     color: COLORS.creamMuted,
     lineHeight: 16,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+    marginBottom: 4,
+  },
+  insideMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  insideMetaText: {
+    fontSize: 11,
+    color: COLORS.gold,
+    fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   insideActionRow: {
@@ -1395,9 +1486,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: 'rgba(36, 213, 197, 0.35)',
     paddingVertical: 12,
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     borderRadius: BORDER_RADIUS.md,
   },
   insideActionBtnText: {
@@ -1407,33 +1498,103 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── 4. REAL PHOTOGRAPHY SECTION ──
-  photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  // ── 5. REAL PHOTOGRAPHY SECTION ──
+  editorialGalleryContainer: {
+    width: '100%',
+    marginBottom: 24,
     gap: 18,
-    marginBottom: SPACING.lg,
-    width: '100%',
   },
-  photoGridMobile: {
-    flexDirection: 'column',
-    gap: 14,
+  galleryHeroCard: {
     width: '100%',
-  },
-  photoCard: {
-    borderRadius: BORDER_RADIUS.lg,
+    height: 360,
+    borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     backgroundColor: COLORS.surface,
-    ...SHADOWS.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    elevation: 6,
   },
-  photoCardDesktop: {
-    width: '48.5%',
-    height: 250,
+  galleryHeroCardMobile: {
+    height: 260,
   },
-  photoCardMobileFull: {
+  galleryHeroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(11, 9, 9, 0.32)',
+  },
+  galleryHeroTopBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(18, 15, 14, 0.90)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.40)',
+  },
+  galleryHeroBadgeText: {
+    color: COLORS.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  galleryHeroInfo: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 60,
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  galleryHeroTitle: {
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: 4,
+  },
+  galleryHeroSubtitle: {
+    fontSize: 13,
+    color: COLORS.creamMuted,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  gallerySupportingGrid: {
+    flexDirection: 'row',
+    gap: 18,
+    width: '100%',
+  },
+  gallerySupportingGridMobile: {
+    flexDirection: 'column',
+    gap: 14,
+  },
+  supportingPhotoCard: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLORS.surface,
+  },
+  supportingPhotoCardDesktop: {
+    flex: 1,
+    height: 240,
+  },
+  supportingPhotoCardMobile: {
     width: '100%',
     height: 220,
   },
@@ -1447,13 +1608,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18, 15, 14, 0.40)',
+    backgroundColor: 'rgba(11, 9, 9, 0.35)',
   },
   photoInfo: {
     position: 'absolute',
-    bottom: SPACING.md,
-    left: SPACING.md,
-    right: SPACING.md,
+    bottom: 12,
+    left: 12,
+    right: 12,
+    backgroundColor: 'rgba(18, 15, 14, 0.88)',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   photoCategoryBadge: {
     color: COLORS.brandTurquoise,
@@ -1466,7 +1632,7 @@ const styles = StyleSheet.create({
   },
   photoTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.cream,
     marginBottom: 2,
@@ -1479,100 +1645,131 @@ const styles = StyleSheet.create({
   },
   photoZoomIcon: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(18, 15, 14, 0.75)',
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(18, 15, 14, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   galleryActionRow: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 12,
   },
   viewFullGalleryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 22,
     borderRadius: BORDER_RADIUS.md,
   },
   viewFullGalleryBtnText: {
     color: COLORS.cream,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── 5. MENU DISCOVERY SECTION ──
+  // ── 6. MENU DISCOVERY SECTION ──
   menuSectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: SPACING.md,
+    alignItems: 'flex-start',
+    marginBottom: 20,
     flexWrap: 'wrap',
-    gap: 14,
+    gap: 16,
     width: '100%',
+  },
+  menuDietaryStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 10,
+    flexWrap: 'wrap',
+  },
+  menuDietaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuDietaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 5,
+  },
+  menuDietaryText: {
+    color: COLORS.creamMuted,
+    fontSize: 11.5,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   menuHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flexWrap: 'wrap',
+    marginTop: 8,
   },
   viewPrintedMenuBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(217, 164, 65, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(217, 164, 65, 0.4)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    borderColor: 'rgba(217, 164, 65, 0.45)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: BORDER_RADIUS.md,
   },
   viewPrintedMenuBtnText: {
     color: COLORS.gold,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   viewAllMenuBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
   },
   viewAllMenuBtnText: {
     color: COLORS.brandTurquoise,
     fontSize: 13.5,
-    fontWeight: '600',
+    fontWeight: '700',
     marginRight: 4,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   homeCategoryPills: {
     flexDirection: 'row',
-    gap: 8,
-    paddingBottom: SPACING.sm,
-    marginBottom: SPACING.lg,
+    gap: 10,
+    paddingBottom: 10,
+    marginBottom: 22,
   },
   categoryPill: {
-    paddingHorizontal: 15,
-    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(33, 27, 25, 0.75)',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 6,
   },
   categoryPillActive: {
-    backgroundColor: COLORS.brandTurquoise + '25',
+    backgroundColor: 'rgba(36, 213, 197, 0.18)',
     borderColor: COLORS.brandTurquoise,
   },
   categoryPillText: {
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     fontSize: 12.5,
     fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
@@ -1581,11 +1778,30 @@ const styles = StyleSheet.create({
     color: COLORS.brandTurquoise,
     fontWeight: '700',
   },
+  categoryCountBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  categoryCountBadgeActive: {
+    backgroundColor: 'rgba(36, 213, 197, 0.35)',
+  },
+  categoryCountText: {
+    color: COLORS.creamMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  categoryCountTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
   menuGridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 18,
-    marginBottom: SPACING.lg,
+    marginBottom: 24,
     width: '100%',
   },
   menuGridRowMobile: {
@@ -1605,26 +1821,26 @@ const styles = StyleSheet.create({
   menuCardColMobile: {
     width: '100%',
   },
-  menuBottomAction: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   menuBottomActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
     flexWrap: 'wrap',
-    marginTop: SPACING.md,
+    marginTop: 16,
   },
   browseAllDishesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.brandHeart,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
     borderRadius: BORDER_RADIUS.md,
-    ...SHADOWS.card,
+    shadowColor: COLORS.brandHeart,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
   },
   browseAllDishesBtnText: {
     color: '#FFFFFF',
@@ -1637,11 +1853,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(217, 164, 65, 0.5)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    borderColor: 'rgba(217, 164, 65, 0.50)',
+    paddingVertical: 13,
+    paddingHorizontal: 22,
     borderRadius: BORDER_RADIUS.md,
-    ...SHADOWS.card,
   },
   browsePrintedMenuBtnText: {
     color: COLORS.gold,
@@ -1650,19 +1865,39 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── 6. FEATURED DISHES ──
+  // ── 7. FEATURED DISHES ──
   featuredDishesContainer: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 24,
     width: '100%',
   },
   featuredDishesMobile: {
     flexDirection: 'column',
-    gap: 16,
+    gap: 18,
     width: '100%',
   },
   heroDishCard: {
     width: '100%',
+    position: 'relative',
+  },
+  heroDishBanner: {
+    backgroundColor: 'rgba(217, 164, 65, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.45)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+  },
+  heroDishBannerText: {
+    color: COLORS.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   supportingGrid: {
     flexDirection: 'row',
@@ -1680,22 +1915,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // ── 7. REVIEWS SECTION ──
+  // ── 8. REVIEWS SECTION ──
   ratingsSummaryStrip: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: SPACING.lg,
+    marginBottom: 28,
   },
   ratingSummaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(33, 27, 25, 0.75)',
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingVertical: 7,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: BORDER_RADIUS.full,
   },
@@ -1714,14 +1949,30 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   ratingSummaryCount: {
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     fontSize: 11.5,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  ratingTrustTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(46, 125, 50, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(46, 125, 50, 0.35)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  ratingTrustTagText: {
+    color: '#A5D6A7',
+    fontSize: 12,
+    fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewsGridRow: {
     flexDirection: 'row',
     gap: 18,
-    marginBottom: SPACING.lg,
+    marginBottom: 24,
     width: '100%',
   },
   reviewsGridRowMobile: {
@@ -1730,13 +1981,17 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   homeReviewCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    backgroundColor: 'rgba(33, 27, 25, 0.75)',
+    borderRadius: 18,
+    padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'space-between',
-    ...SHADOWS.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   homeReviewCardDesktop: {
     flex: 1,
@@ -1748,45 +2003,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  reviewQuoteSymbol: {
+    fontSize: 32,
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    color: 'rgba(217, 164, 65, 0.45)',
+    lineHeight: 32,
+    marginRight: 8,
   },
   starCluster: {
     flexDirection: 'row',
+    flex: 1,
   },
   reviewSourceTag: {
-    backgroundColor: COLORS.surfaceElevated,
-    paddingVertical: 2,
+    backgroundColor: 'rgba(36, 213, 197, 0.12)',
+    paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: BORDER_RADIUS.xs,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: 'rgba(36, 213, 197, 0.30)',
   },
   reviewSourceTagText: {
     color: COLORS.brandTurquoise,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewQuoteText: {
     fontSize: 13.5,
     color: COLORS.creamMuted,
-    lineHeight: 21,
+    lineHeight: 22,
     fontStyle: 'italic',
-    marginBottom: 14,
+    marginBottom: 16,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewCardAuthorRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  reviewAuthorGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reviewAvatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(217, 164, 65, 0.20)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.40)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewAvatarInitial: {
+    color: COLORS.gold,
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewAuthorName: {
     color: COLORS.cream,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  reviewAuthorTag: {
+    color: COLORS.textMuted,
+    fontSize: 11,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewSourceLink: {
@@ -1795,8 +2084,8 @@ const styles = StyleSheet.create({
   },
   reviewSourceLinkText: {
     color: COLORS.brandTurquoise,
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 11.5,
+    fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reviewsActionRow: {
@@ -1806,36 +2095,41 @@ const styles = StyleSheet.create({
   viewAllReviewsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   viewAllReviewsBtnText: {
     color: COLORS.brandTurquoise,
-    fontSize: 13.5,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
-  // ── 8. VISIT & LOCATION SECTION ──
+  // ── 9. VISIT & LOCATION SECTION ──
   visitSplitGrid: {
     flexDirection: 'row',
-    gap: 36,
+    gap: 40,
     alignItems: 'center',
     width: '100%',
   },
   visitSplitGridMobile: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 24,
+    gap: 26,
     width: '100%',
   },
   visitMapWrapper: {
     flex: 1.1,
-    height: 360,
-    borderRadius: BORDER_RADIUS.hero,
+    height: 380,
+    borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     backgroundColor: COLORS.surface,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 6,
   },
   visitMapWrapperMobile: {
     width: '100%',
@@ -1867,8 +2161,51 @@ const styles = StyleSheet.create({
   visitInfoContentMobile: {
     width: '100%',
   },
+  liveOpenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(46, 125, 50, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.40)',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.full,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  liveOpenDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+    marginRight: 6,
+  },
+  liveOpenText: {
+    color: '#A5D6A7',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  visitLandmarkBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(33, 27, 25, 0.70)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.25)',
+    marginBottom: 14,
+  },
+  visitLandmarkText: {
+    color: COLORS.creamMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+    flex: 1,
+  },
   visitInfoRows: {
-    marginVertical: SPACING.md,
+    marginVertical: 10,
     gap: 14,
   },
   visitInfoItem: {
@@ -1881,39 +2218,52 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   visitItemLabel: {
-    color: COLORS.textSubtle,
+    color: COLORS.copper,
     fontSize: 10.5,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    fontWeight: '700',
     marginBottom: 2,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   visitItemValue: {
     color: COLORS.cream,
     fontSize: 13.5,
-    fontWeight: '500',
+    fontWeight: '600',
     lineHeight: 19,
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-  visitPlusCode: {
-    color: COLORS.copperLight,
-    fontSize: 11,
+  visitSubNote: {
+    color: COLORS.creamMuted,
+    fontSize: 11.5,
     marginTop: 2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  visitPlusCode: {
+    color: COLORS.brandTurquoise,
+    fontSize: 11.5,
+    marginTop: 2,
+    fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   visitActionsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: SPACING.sm,
+    marginTop: 14,
     flexWrap: 'wrap',
   },
   visitPrimaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.copper,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 18,
     borderRadius: BORDER_RADIUS.md,
+    shadowColor: COLORS.copper,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   visitPrimaryBtnText: {
     color: '#FFFFFF',
@@ -1926,8 +2276,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingVertical: 10,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: BORDER_RADIUS.md,
   },
@@ -1937,35 +2287,64 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
-
-  // ── 9. INVITATION RESERVATION BANNER ──
-  reserveBannerCard: {
-    backgroundColor: COLORS.surfaceElevated,
-    borderRadius: BORDER_RADIUS.xl,
+  visitWhatsAppBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(36, 213, 197, 0.12)',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(36, 213, 197, 0.40)',
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  visitWhatsAppBtnText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+
+  // ── 10. INVITATION RESERVATION BANNER ──
+  reserveBannerCard: {
+    backgroundColor: 'rgba(26, 20, 18, 0.90)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.40)',
     padding: SPACING.xxl,
     alignItems: 'center',
     textAlign: 'center',
-    maxWidth: 840,
+    maxWidth: 880,
     width: '100%',
     marginHorizontal: 'auto',
-    ...SHADOWS.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 8,
   },
   reserveBannerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(225, 29, 72, 0.15)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 45, 93, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(225, 29, 72, 0.3)',
+    borderColor: 'rgba(255, 45, 93, 0.35)',
+  },
+  reserveBannerEyebrow: {
+    color: COLORS.copper,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reserveBannerTitle: {
     fontFamily: TYPOGRAPHY.fontFamilySerif,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
     color: COLORS.cream,
     textAlign: 'center',
@@ -1973,16 +2352,40 @@ const styles = StyleSheet.create({
   },
   reserveBannerSub: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.creamMuted,
     textAlign: 'center',
-    maxWidth: 540,
-    lineHeight: 21,
-    marginBottom: SPACING.xl,
+    maxWidth: 580,
+    lineHeight: 22,
+    marginBottom: 20,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  reservePerksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14,
+    marginBottom: 24,
+    maxWidth: 720,
+  },
+  reservePerkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(33, 27, 25, 0.65)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  reservePerkText: {
+    color: COLORS.cream,
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
   reserveBannerActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
     flexWrap: 'wrap',
     justifyContent: 'center',
     width: '100%',
@@ -1992,11 +2395,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.brandHeart,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 13,
+    paddingHorizontal: 26,
     borderRadius: BORDER_RADIUS.md,
     minWidth: 200,
-    ...SHADOWS.card,
+    shadowColor: COLORS.brandHeart,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
   bannerReserveBtnText: {
     color: '#FFFFFF',
@@ -2008,13 +2415,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    borderColor: 'rgba(217, 164, 65, 0.45)',
+    paddingVertical: 13,
+    paddingHorizontal: 22,
     borderRadius: BORDER_RADIUS.md,
-    minWidth: 180,
+    minWidth: 190,
   },
   bannerCallBtnText: {
     color: COLORS.cream,
@@ -2023,3 +2430,4 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 });
+

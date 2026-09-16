@@ -14,7 +14,7 @@ import { HeroMeta } from './HeroMeta';
 import { HeroCTA } from './HeroCTA';
 import { ScrollIndicator } from './ScrollIndicator';
 
-const VIDEO_SOURCE = '/videos/restaurant_video_2.mp4';
+const VIDEO_SOURCE = '/videos/restaurant_video_1.mp4';
 const FALLBACK_IMAGE = '/photos/storefront_signboard.jpg';
 
 interface CinematicHeroProps {
@@ -54,7 +54,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
               setVideoLoaded(true);
             })
             .catch(() => {
-              // Autoplay blocked by browser policy; video remains behind UI, poster or fallback active
+              // Autoplay blocked by browser policy; poster/fallback active
               setVideoLoaded(true);
             });
         }
@@ -65,9 +65,9 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
   return (
     <View 
       style={styles.heroRoot}
-      {...(Platform.OS === 'web' ? { role: 'main', className: 'relative min-h-screen overflow-hidden' } : {})}
+      {...(Platform.OS === 'web' ? { role: 'main', className: 'relative isolate min-h-[100svh] overflow-hidden' } : {})}
     >
-      {/* ── 1. FULLSCREEN HTML5 BACKGROUND VIDEO ── */}
+      {/* ── 1. FULLSCREEN HTML5 BACKGROUND VIDEO (Authentic Restaurant Footage) ── */}
       {Platform.OS === 'web' && !videoError ? (
         <video
           ref={videoRef}
@@ -80,6 +80,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
           poster={FALLBACK_IMAGE}
           onError={() => setVideoError(true)}
           onLoadedData={() => setVideoLoaded(true)}
+          className="absolute inset-0 z-0 h-full w-full object-cover object-center"
           style={{
             position: 'absolute',
             top: 0,
@@ -88,6 +89,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
             height: '100%',
             minHeight: '100svh',
             objectFit: 'cover',
+            objectPosition: 'center center',
             zIndex: 0,
             pointerEvents: 'none',
           }}
@@ -103,20 +105,17 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
         />
       )}
 
-      {/* ── 2. SUBTLE LOCALIZED READABILITY SCRIM (NO HEAVY BLACK GRADIENT, NO BLOBS) ── */}
+      {/* ── 2. SUBTLE READABILITY LAYER (Clean & Authentic, Not Heavy Neon or Murky Black) ── */}
       <View style={styles.subtleScrim} />
 
-      {/* ── 3. FLOATING GLASS NAVIGATION ── */}
+      {/* ── 3. FLOATING GLASS NAVIGATION (z-index: 50) ── */}
       <GlassNavigation />
 
-      {/* ── 4. CENTERED HERO CONTENT ── */}
+      {/* ── 4. CENTERED HERO CONTENT (Clear of navbar, normal document flow) ── */}
       <View style={[
         styles.heroContentWrapper,
         isDesktop ? styles.heroContentDesktop : styles.heroContentMobile,
       ]}>
-        {/* Safe Top Spacer to guarantee zero collision with GlassNavigation */}
-        <View style={{ height: isDesktop ? 96 : isMobile ? 112 : 90, width: '100%' }} />
-
         {/* Brand Eyebrow with Heartbeat Accent */}
         <View 
           style={[styles.eyebrowContainer, isMobile && styles.eyebrowContainerMobile]}
@@ -129,7 +128,7 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
           <View style={styles.eyebrowDot} />
         </View>
 
-        {/* Large Editorial Headline in Instrument Serif */}
+        {/* Large Editorial Headline: Normal document flow, no absolute positioning of words */}
         <View 
           style={styles.headingWrapper}
           {...(Platform.OS === 'web' ? { className: 'animate-dream-rise-delay-2' } : {})}
@@ -139,32 +138,38 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
               className="font-display"
               style={{
                 fontFamily: "var(--font-display, 'Instrument Serif', Georgia, serif)",
-                fontSize: isSmallMobile ? '38px' : isMobile ? '46px' : isTablet ? '72px' : isLargeDesktop ? '104px' : '88px',
-                lineHeight: 0.93,
+                fontSize: isMobile ? 'clamp(2.75rem, 11vw, 4.25rem)' : 'clamp(3.85rem, 6.2vw, 7.5rem)',
+                lineHeight: 1.02,
                 fontWeight: 400,
-                letterSpacing: '-0.03em',
+                letterSpacing: '-0.025em',
                 color: 'var(--dream-cream, #F6F1EA)',
                 margin: 0,
                 textAlign: 'center',
                 maxWidth: '1100px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: isMobile ? 4 : 8,
               }}
             >
-              Good Food.<br />
-              Warm <em style={{ fontStyle: 'normal', color: 'var(--dream-pink, #F43F67)' }}>Moments.</em><br />
-              Made with <em style={{ fontStyle: 'normal', color: 'var(--dream-pink, #F43F67)' }}>Love.</em>
+              <span style={{ display: 'block' }}>Good Food.</span>
+              <span style={{ display: 'block' }}>
+                Warm <em style={{ fontStyle: 'normal', color: 'var(--dream-pink, #F43F67)' }}>Moments.</em>
+              </span>
+              <span style={{ display: 'block' }}>
+                Made with <em style={{ fontStyle: 'normal', color: 'var(--dream-pink, #F43F67)' }}>Love.</em>
+              </span>
             </h1>
           ) : (
-            <Text style={[
-              styles.headingText,
-              isSmallMobile && styles.headingSmallMobile,
-              isMobile && !isSmallMobile && styles.headingMobile,
-              isTablet && styles.headingTablet,
-              isDesktop && styles.headingDesktop,
-            ]}>
-              Good Food.{'\n'}
-              Warm Moments.{'\n'}
-              Made with Love.
-            </Text>
+            <View style={styles.headingColumn}>
+              <Text style={[styles.headingText, isMobile && styles.headingMobile]}>Good Food.</Text>
+              <Text style={[styles.headingText, isMobile && styles.headingMobile]}>
+                Warm <Text style={{ color: COLORS.dreamPink }}>Moments.</Text>
+              </Text>
+              <Text style={[styles.headingText, isMobile && styles.headingMobile]}>
+                Made with <Text style={{ color: COLORS.dreamPink }}>Love.</Text>
+              </Text>
+            </View>
           )}
         </View>
 
@@ -187,16 +192,6 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
         {/* Primary Action Buttons */}
         <HeroCTA />
 
-        {/* Brand Micro-Detail Line */}
-        <View 
-          style={styles.microDetailWrapper}
-          {...(Platform.OS === 'web' ? { className: 'animate-dream-rise-delay-5' } : {})}
-        >
-          <Text style={styles.microDetailText}>
-            INDIAN • TANDOOR • CHINESE • BIRYANI • BEVERAGES
-          </Text>
-        </View>
-
       </View>
 
       {/* ── 5. BOTTOM SCROLL INDICATOR ── */}
@@ -210,8 +205,7 @@ const styles = StyleSheet.create({
   heroRoot: {
     position: 'relative',
     width: '100%',
-    minHeight: Platform.OS === 'web' ? ('100svh' as any) : '100%',
-    height: Platform.OS === 'web' ? ('100svh' as any) : 740,
+    minHeight: Platform.OS === 'web' ? ('100svh' as any) : 740,
     backgroundColor: COLORS.dreamEspresso,
     overflow: 'hidden',
     flexDirection: 'column',
@@ -237,8 +231,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     zIndex: 1,
-    // Very subtle cinematic exposure tint - preserves video clarity while ensuring text contrast
-    backgroundColor: 'rgba(18, 15, 13, 0.44)',
+    backgroundColor: 'rgba(0, 0, 0, 0.26)',
     pointerEvents: 'none',
   },
   heroContentWrapper: {
@@ -247,19 +240,19 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1100,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     textAlign: 'center',
     marginHorizontal: 'auto',
     flex: 1,
   },
   heroContentDesktop: {
-    paddingTop: 8,
+    paddingTop: 112,
     paddingBottom: 24,
     paddingHorizontal: 24,
   },
   heroContentMobile: {
-    paddingTop: 4,
-    paddingBottom: 16,
+    paddingTop: 88,
+    paddingBottom: 84,
     paddingHorizontal: 16,
   },
   eyebrowContainer: {
@@ -296,6 +289,11 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headingColumn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   headingText: {
     fontFamily: TYPOGRAPHY.fontFamilyDisplay,
@@ -342,19 +340,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     maxWidth: 340,
     lineHeight: 22,
-  },
-  microDetailWrapper: {
-    marginTop: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  microDetailText: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.8,
-    color: COLORS.dreamTeal,
-    fontFamily: TYPOGRAPHY.fontFamilySans,
-    textTransform: 'uppercase',
-    opacity: 0.85,
   },
 });

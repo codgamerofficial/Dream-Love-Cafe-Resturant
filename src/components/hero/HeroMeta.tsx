@@ -22,23 +22,17 @@ export const HeroMeta: React.FC<HeroMetaProps> = () => {
         <Text style={styles.chipText}>Contai, West Bengal</Text>
       </View>
 
-      <Text style={styles.separator}>•</Text>
-
       {/* Opening Hours Chip */}
       <View style={styles.metaChip}>
         <Clock size={13} color={COLORS.dreamTeal} style={styles.icon} />
         <Text style={styles.chipText}>12:00 PM – 12:00 AM</Text>
       </View>
 
-      <Text style={styles.separator}>•</Text>
-
       {/* Cuisines Chip */}
       <View style={styles.metaChip}>
         <UtensilsCrossed size={13} color={COLORS.dreamPink} style={styles.icon} />
         <Text style={styles.chipText}>Indian • Tandoor • Chinese • Biryani</Text>
       </View>
-
-      <Text style={styles.separator}>•</Text>
 
       {/* Google Rating Chip */}
       <View style={styles.metaChip}>
