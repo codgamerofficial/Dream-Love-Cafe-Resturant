@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, Modal, TouchableOpacity, Platform } from 'react-native';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { GalleryItem } from '../../types';
@@ -23,15 +23,31 @@ export const Lightbox: React.FC<LightboxProps> = ({
 
   const currentItem = items[currentIndex] || items[0];
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
     onSelectIndex(prev);
-  };
+  }, [currentIndex, items.length, onSelectIndex]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
     onSelectIndex(next);
-  };
+  }, [currentIndex, items.length, onSelectIndex]);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowLeft') handlePrev();
+      else if (e.key === 'ArrowRight') handleNext();
+    };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+    }
+  }, [isOpen, onClose, handlePrev, handleNext]);
+
+  const isVideo = currentItem?.image_url?.endsWith('.mp4') || (currentItem as any)?.media_type === 'video';
 
   return (
     <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={onClose}>
@@ -41,24 +57,40 @@ export const Lightbox: React.FC<LightboxProps> = ({
           <Text style={styles.counterText}>
             {currentIndex + 1} / {items.length}
           </Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close lightbox">
             <X size={26} color={COLORS.cream} />
           </TouchableOpacity>
         </View>
 
-        {/* Main Image Stage */}
+        {/* Main Image/Video Stage */}
         <View style={styles.imageStage}>
-          <TouchableOpacity style={styles.navBtnLeft} onPress={handlePrev}>
+          <TouchableOpacity style={styles.navBtnLeft} onPress={handlePrev} accessibilityLabel="Previous media">
             <ChevronLeft size={36} color={COLORS.cream} />
           </TouchableOpacity>
 
-          <Image
-            source={{ uri: currentItem.image_url }}
-            style={styles.lightboxImage}
-            resizeMode="contain"
-          />
+          {isVideo && Platform.OS === 'web' ? (
+            <video
+              src={currentItem.image_url}
+              controls
+              autoPlay
+              playsInline
+              style={{
+                maxWidth: '92%',
+                maxHeight: '75vh',
+                borderRadius: 14,
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.85)',
+                outline: 'none',
+              } as any}
+            />
+          ) : (
+            <Image
+              source={{ uri: currentItem.image_url }}
+              style={styles.lightboxImage}
+              resizeMode="contain"
+            />
+          )}
 
-          <TouchableOpacity style={styles.navBtnRight} onPress={handleNext}>
+          <TouchableOpacity style={styles.navBtnRight} onPress={handleNext} accessibilityLabel="Next media">
             <ChevronRight size={36} color={COLORS.cream} />
           </TouchableOpacity>
         </View>

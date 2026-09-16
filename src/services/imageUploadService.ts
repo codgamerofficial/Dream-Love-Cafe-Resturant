@@ -145,8 +145,18 @@ export async function optimizeImageClientSide(
         let permanentDataUrl: string | undefined;
         try {
           permanentDataUrl = displayCanvas.toDataURL(exportFormat, 0.85);
+          if (!permanentDataUrl || permanentDataUrl.length < 50 || !permanentDataUrl.startsWith('data:')) {
+            permanentDataUrl = displayCanvas.toDataURL('image/jpeg', 0.85);
+          }
         } catch {
-          // Fallback if toDataURL fails on tainted canvas
+          try {
+            permanentDataUrl = displayCanvas.toDataURL('image/jpeg', 0.85);
+          } catch {
+            permanentDataUrl = event.target?.result as string;
+          }
+        }
+        if (!permanentDataUrl || !permanentDataUrl.startsWith('data:')) {
+          permanentDataUrl = (event.target?.result as string) || undefined;
         }
 
         displayCanvas.toBlob(

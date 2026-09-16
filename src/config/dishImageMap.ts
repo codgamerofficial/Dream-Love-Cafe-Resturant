@@ -319,8 +319,13 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
  * - Otherwise attaches high-quality temporary mock image with mock_placeholder and image_replacement_required = true.
  */
 export function enhanceMenuItemWithImage(item: MenuItem): MenuItem {
-  // If it's already an authentic owner/restaurant photo
-  if (item.image_type === 'real_restaurant' && item.image_verified && item.image_url) {
+  // If it's already an authentic owner/restaurant photo or custom uploaded photo
+  const hasCustomImage = 
+    (item.image_type === 'real_restaurant' && !!item.image_url) ||
+    item.image_source === 'owner_upload' ||
+    (!!item.image_url && (item.image_url.includes('menu-images') || item.image_url.startsWith('data:')));
+
+  if (hasCustomImage && item.image_url) {
     const hash = generateImageHash(item.image_url);
     return {
       ...item,
@@ -328,11 +333,11 @@ export function enhanceMenuItemWithImage(item: MenuItem): MenuItem {
       image_type: 'real_restaurant',
       image_verified: true,
       image_replacement_required: false,
-      image_source: item.image_source || 'owner',
+      image_source: item.image_source || 'owner_upload',
       image_license_status: item.image_license_status || 'owner_provided',
       image_match_confidence: 'high',
-      image_hash: hash,
-      perceptual_hash: generatePerceptualHash(item.image_url, item.name),
+      image_hash: item.image_hash || hash,
+      perceptual_hash: item.perceptual_hash || generatePerceptualHash(item.image_url, item.name),
     };
   }
 

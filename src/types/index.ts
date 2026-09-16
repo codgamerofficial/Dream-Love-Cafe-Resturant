@@ -219,16 +219,18 @@ export interface DatabaseOrder {
 export interface GalleryItem {
   id: string;
   title: string;
-  category: 'Storefront' | 'Interior' | 'Dining Area' | 'Food' | 'Beverages' | 'Ambience';
+  category: 'Storefront' | 'Interior' | 'Dining Area' | 'Food' | 'Beverages' | 'Ambience' | 'Exterior' | 'Dining' | string;
   image_url: string;
   thumbnail_url?: string;
   caption?: string;
   alt_text: string;
-  source: 'Client Real Photo' | 'Verified Storefront' | 'Owner Upload';
+  source: 'Client Real Photo' | 'Verified Storefront' | 'Owner Upload' | 'Verified Real Video' | 'Verified Real Photo' | 'Culinary Selection' | 'Beverage Selection' | 'Original Menu Artwork' | string;
   source_url?: string;
   owner_verified: boolean;
   is_featured: boolean;
   display_order: number;
+  media_type?: 'image' | 'video';
+  poster_url?: string;
 }
 
 export interface VerifiedReview {

@@ -29,12 +29,16 @@ import {
   Flame,
   ArrowRight,
   ShieldCheck,
-  Maximize2
+  Maximize2,
+  Play,
+  Film,
+  BookOpen
 } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../src/theme';
 import { useSettings } from '../src/context/SettingsContext';
 import { MenuCard } from '../src/components/menu/MenuCard';
 import { Lightbox } from '../src/components/ui/Lightbox';
+import { OriginalMenuViewer } from '../src/components/menu/OriginalMenuViewer';
 import { analytics } from '../src/services/analytics';
 import { GalleryItem } from '../src/types';
 import { CinematicHero } from '../src/components/hero';
@@ -53,9 +57,70 @@ export default function HomePage() {
   // Selected Category filter on home
   const [selectedHomeCat, setSelectedHomeCat] = useState<string>('all');
 
-  // Lightbox State for Real Photography Gallery
+  // Lightbox State for Real Photography & Video Gallery
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
+  const [originalMenuOpen, setOriginalMenuOpen] = useState(false);
+
+  // Real Atmospheric Videos for "Inside Dream Love"
+  const insideVideos: GalleryItem[] = [
+    {
+      id: 'vid-dining-room',
+      title: 'Warm Dining Hall & Private Booths',
+      caption: 'Real video walkthrough of our spacious dining room and comfortable booth seating in Contai.',
+      image_url: '/videos/restaurant_video_2.mp4',
+      poster_url: '/photos/interior_cafe_lounge.jpg',
+      category: 'Interior',
+      alt_text: 'Spacious dining room and private booth seating video at Dream Love Cafe & Restaurant',
+      source: 'Verified Storefront',
+      owner_verified: true,
+      is_featured: true,
+      display_order: 1,
+      media_type: 'video',
+    },
+    {
+      id: 'vid-kitchen-prep',
+      title: 'Kitchen Craft & Food Counter',
+      caption: 'Freshly prepared multi-cuisine service counter, hygienic food preparation, and warm hospitality.',
+      image_url: '/videos/restaurant_video_4.mp4',
+      poster_url: '/photos/interior_dining_counter.jpg',
+      category: 'Dining Area',
+      alt_text: 'Fresh multi-cuisine service counter and kitchen at Dream Love Contai',
+      source: 'Verified Storefront',
+      owner_verified: true,
+      is_featured: true,
+      display_order: 2,
+      media_type: 'video',
+    },
+    {
+      id: 'vid-cafe-ambience',
+      title: 'Evening Café Ambience & Lighting',
+      caption: 'Charming atmospheric lighting designed for romantic dinners, family meals, and evening coffee.',
+      image_url: '/videos/restaurant_video_3.mp4',
+      poster_url: '/photos/interior_cafe_lounge.jpg',
+      category: 'Ambience',
+      alt_text: 'Evening mood lighting and cafe ambience at Dream Love Contai',
+      source: 'Verified Storefront',
+      owner_verified: true,
+      is_featured: true,
+      display_order: 3,
+      media_type: 'video',
+    },
+    {
+      id: 'vid-storefront-view',
+      title: 'Entrance & Contai Bypass View',
+      caption: 'Our prime location on Contai Bypass Road opposite Jawed Habib\'s, near the Central Bus Stand.',
+      image_url: '/videos/restaurant_video_1.mp4',
+      poster_url: '/photos/storefront_signboard.jpg',
+      category: 'Storefront',
+      alt_text: 'Storefront and Contai Bypass Road entrance video of Dream Love Cafe',
+      source: 'Verified Storefront',
+      owner_verified: true,
+      is_featured: true,
+      display_order: 4,
+      media_type: 'video',
+    },
+  ];
 
   // Real Client Photographs
   const realPhotos: GalleryItem[] = [
@@ -64,50 +129,61 @@ export default function HomePage() {
       title: 'Storefront & Neon Signboard',
       caption: 'Main entrance on Contai Bypass Road opposite Jawed Habib\'s',
       image_url: '/photos/storefront_signboard.jpg',
+      poster_url: '/photos/storefront_signboard.jpg',
       alt_text: 'Dream Love Cafe & Restaurant Storefront and Neon Signboard on Contai Bypass Road',
       category: 'Storefront',
       source: 'Verified Storefront',
       owner_verified: true,
       is_featured: true,
-      display_order: 1,
+      display_order: 5,
+      media_type: 'image',
     },
     {
       id: 'photo-2',
       title: 'Cafe Lounge & Seating',
       caption: 'Warm ambiance with comfortable booth seating for family & friends',
       image_url: '/photos/interior_cafe_lounge.jpg',
+      poster_url: '/photos/interior_cafe_lounge.jpg',
       alt_text: 'Warm interior booth and table dining area at Dream Love Cafe & Restaurant Contai',
       category: 'Interior',
       source: 'Verified Storefront',
       owner_verified: true,
       is_featured: true,
-      display_order: 2,
+      display_order: 6,
+      media_type: 'image',
     },
     {
       id: 'photo-3',
       title: 'Dining Counter & Kitchen',
       caption: 'Clean service area where fresh multi-cuisine dishes are prepared',
       image_url: '/photos/interior_dining_counter.jpg',
+      poster_url: '/photos/interior_dining_counter.jpg',
       alt_text: 'Hygienic dining counter and kitchen at Dream Love Cafe & Restaurant',
       category: 'Dining Area',
       source: 'Verified Storefront',
       owner_verified: true,
       is_featured: false,
-      display_order: 3,
+      display_order: 7,
+      media_type: 'image',
     },
     {
       id: 'photo-4',
       title: 'Street View & Refreshment Kiosk',
       caption: 'Conveniently situated near the Central Bus Stand landmark in Contai',
       image_url: '/photos/exterior_street_view.jpg',
+      poster_url: '/photos/exterior_street_view.jpg',
       alt_text: 'Exterior street view and refreshment kiosk near Central Bus Stand Contai',
       category: 'Storefront',
       source: 'Verified Storefront',
       owner_verified: true,
       is_featured: false,
-      display_order: 4,
+      display_order: 8,
+      media_type: 'image',
     },
   ];
+
+  // Combined Media for Lightbox
+  const allHomeMedia: GalleryItem[] = [...insideVideos, ...realPhotos];
 
   // Curated featured dishes
   const featuredItems = menuItems.filter((i) => i.isFeatured && (i.image_url || i.image)).slice(0, 5);
@@ -125,7 +201,7 @@ export default function HomePage() {
     Linking.openURL(settings.googleMapsUrl);
   };
 
-  const openPhotoLightbox = (index: number) => {
+  const openMediaLightbox = (index: number) => {
     setSelectedPhotoIdx(index);
     setLightboxOpen(true);
   };
@@ -248,11 +324,79 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* ── 4. REAL RESTAURANT PHOTOGRAPHY (Editorial Gallery) ── */}
+      {/* ── 3. INSIDE DREAM LOVE (Atmospheric Video Tour) ── */}
       <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.sectionHeaderCentered}>
-            <Text style={styles.sectionEyebrow}>REAL RESTAURANT PHOTOGRAPHY</Text>
+            <Text style={styles.sectionEyebrow}>INSIDE DREAM LOVE</Text>
+            <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
+              Experience the Authentic Atmosphere
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              Take a virtual walk-through of our dining hall, live kitchen counter, cozy booths, and vibrant Contai storefront.
+            </Text>
+          </View>
+
+          {/* 4 Inside Video Cards */}
+          <View style={[styles.insideGrid, !isDesktop && styles.insideGridMobile]}>
+            {insideVideos.map((item, idx) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.insideCard,
+                  isDesktop && styles.insideCardDesktop,
+                  !isDesktop && styles.insideCardMobile,
+                ]}
+                onPress={() => openMediaLightbox(idx)}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{ uri: item.poster_url || item.image_url }}
+                  style={styles.insideImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.insideOverlay} />
+
+                {/* Big Glowing Play Badge */}
+                <View style={styles.insidePlayBadge}>
+                  <Play size={22} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
+                </View>
+
+                <View style={styles.insideTagRow}>
+                  <View style={styles.insideTag}>
+                    <Film size={11} color={COLORS.brandTurquoise} style={{ marginRight: 4 }} />
+                    <Text style={styles.insideTagText}>REAL VIDEO</Text>
+                  </View>
+                  <Text style={styles.insideCategoryText}>{item.category}</Text>
+                </View>
+
+                <View style={styles.insideInfo}>
+                  <Text style={styles.insideTitle}>{item.title}</Text>
+                  <Text style={styles.insideCaption}>{item.caption}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.insideActionRow}>
+            <TouchableOpacity
+              style={styles.insideActionBtn}
+              onPress={() => router.push('/gallery')}
+              activeOpacity={0.85}
+            >
+              <Film size={16} color={COLORS.brandTurquoise} style={{ marginRight: 8 }} />
+              <Text style={styles.insideActionBtnText}>Watch All Restaurant Videos in Gallery</Text>
+              <ArrowRight size={14} color={COLORS.brandTurquoise} style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 4. REAL RESTAURANT GALLERY (Editorial Gallery) ── */}
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionInner}>
+          <View style={styles.sectionHeaderCentered}>
+            <Text style={styles.sectionEyebrow}>AUTHENTIC RESTAURANT GALLERY</Text>
             <Text style={[styles.sectionTitle, isMobile && styles.sectionTitleMobile]}>
               Step Inside Dream Love
             </Text>
@@ -271,7 +415,7 @@ export default function HomePage() {
                   isDesktop && styles.photoCardDesktop,
                   !isDesktop && styles.photoCardMobileFull,
                 ]}
-                onPress={() => openPhotoLightbox(idx)}
+                onPress={() => openMediaLightbox(insideVideos.length + idx)}
                 activeOpacity={0.9}
               >
                 <Image
@@ -301,7 +445,7 @@ export default function HomePage() {
               activeOpacity={0.85}
             >
               <Camera size={16} color={COLORS.cream} style={{ marginRight: 8 }} />
-              <Text style={styles.viewFullGalleryBtnText}>View Complete Photo Gallery</Text>
+              <Text style={styles.viewFullGalleryBtnText}>View Complete Photo & Video Gallery</Text>
               <ArrowRight size={14} color={COLORS.cream} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
@@ -309,7 +453,7 @@ export default function HomePage() {
       </View>
 
       {/* ── 5. EXPLORE THE MENU SECTION (Discovery) ── */}
-      <View style={styles.sectionContainer}>
+      <View style={[styles.sectionContainer, styles.sectionAlt]}>
         <View style={styles.sectionInner}>
           <View style={styles.menuSectionHeaderRow}>
             <View style={{ flex: 1 }}>
@@ -322,14 +466,25 @@ export default function HomePage() {
               </Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.viewAllMenuBtn}
-              onPress={() => router.push('/menu')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.viewAllMenuBtnText}>View Full Menu ({menuItems.length})</Text>
-              <ChevronRight size={16} color={COLORS.brandTurquoise} />
-            </TouchableOpacity>
+            <View style={styles.menuHeaderActions}>
+              <TouchableOpacity
+                style={styles.viewPrintedMenuBtn}
+                onPress={() => setOriginalMenuOpen(true)}
+                activeOpacity={0.85}
+              >
+                <BookOpen size={15} color={COLORS.gold} style={{ marginRight: 6 }} />
+                <Text style={styles.viewPrintedMenuBtnText}>Original Menu (6 Pages)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.viewAllMenuBtn}
+                onPress={() => router.push('/menu')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.viewAllMenuBtnText}>View Full Menu ({menuItems.length})</Text>
+                <ChevronRight size={16} color={COLORS.brandTurquoise} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Category Tabs */}
@@ -383,7 +538,7 @@ export default function HomePage() {
           </View>
 
           {/* Bottom Explore CTA */}
-          <View style={styles.menuBottomAction}>
+          <View style={styles.menuBottomActionRow}>
             <TouchableOpacity
               style={styles.browseAllDishesBtn}
               onPress={() => router.push('/menu')}
@@ -391,6 +546,15 @@ export default function HomePage() {
             >
               <Utensils size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.browseAllDishesBtnText}>Browse All {menuItems.length} Dishes & Drinks</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.browsePrintedMenuBtn}
+              onPress={() => setOriginalMenuOpen(true)}
+              activeOpacity={0.85}
+            >
+              <BookOpen size={16} color={COLORS.gold} style={{ marginRight: 8 }} />
+              <Text style={styles.browsePrintedMenuBtnText}>View Original Printed Menu (6 Pages)</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -648,13 +812,19 @@ export default function HomePage() {
         </View>
       </View>
 
-      {/* Fullscreen Lightbox Modal for Real Photos */}
+      {/* Fullscreen Lightbox Modal for Real Photos & Real Videos */}
       <Lightbox
-        items={realPhotos}
+        items={allHomeMedia}
         currentIndex={selectedPhotoIdx}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
         onSelectIndex={setSelectedPhotoIdx}
+      />
+
+      {/* Fullscreen Original Printed Menu (6 Pages) Viewer */}
+      <OriginalMenuViewer
+        isOpen={originalMenuOpen}
+        onClose={() => setOriginalMenuOpen(false)}
       />
     </View>
   );
@@ -1104,6 +1274,139 @@ const styles = StyleSheet.create({
     fontFamily: TYPOGRAPHY.fontFamilySans,
   },
 
+  // ── 3. INSIDE DREAM LOVE (Video Highlights) ──
+  insideGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
+    marginBottom: SPACING.xl,
+    width: '100%',
+  },
+  insideGridMobile: {
+    flexDirection: 'column',
+    gap: 16,
+    width: '100%',
+  },
+  insideCard: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.card,
+  },
+  insideCardDesktop: {
+    width: '48.5%',
+    height: 270,
+  },
+  insideCardMobile: {
+    width: '100%',
+    height: 240,
+  },
+  insideImage: {
+    width: '100%',
+    height: '100%',
+  },
+  insideOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(11, 9, 9, 0.45)',
+  },
+  insidePlayBadge: {
+    position: 'absolute',
+    top: '40%',
+    left: '50%',
+    transform: [{ translateX: -26 }, { translateY: -26 }],
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(233, 30, 69, 0.90)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    ...SHADOWS.glow,
+  },
+  insideTagRow: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  insideTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11, 9, 9, 0.75)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(36, 213, 197, 0.4)',
+  },
+  insideTagText: {
+    color: COLORS.brandTurquoise,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  insideCategoryText: {
+    color: COLORS.creamMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    backgroundColor: 'rgba(11, 9, 9, 0.65)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.sm,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  insideInfo: {
+    position: 'absolute',
+    bottom: 14,
+    left: 14,
+    right: 14,
+  },
+  insideTitle: {
+    fontFamily: TYPOGRAPHY.fontFamilySerif,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.cream,
+    marginBottom: 4,
+  },
+  insideCaption: {
+    fontSize: 12,
+    color: COLORS.creamMuted,
+    lineHeight: 16,
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  insideActionRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insideActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  insideActionBtnText: {
+    color: COLORS.cream,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+
   // ── 4. REAL PHOTOGRAPHY SECTION ──
   photoGrid: {
     flexDirection: 'row',
@@ -1216,6 +1519,28 @@ const styles = StyleSheet.create({
     gap: 14,
     width: '100%',
   },
+  menuHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  viewPrintedMenuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(217, 164, 65, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.4)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  viewPrintedMenuBtnText: {
+    color: COLORS.gold,
+    fontSize: 12.5,
+    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
   viewAllMenuBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1284,6 +1609,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  menuBottomActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    flexWrap: 'wrap',
+    marginTop: SPACING.md,
+  },
   browseAllDishesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1295,6 +1628,23 @@ const styles = StyleSheet.create({
   },
   browseAllDishesBtnText: {
     color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+  },
+  browsePrintedMenuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.5)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: BORDER_RADIUS.md,
+    ...SHADOWS.card,
+  },
+  browsePrintedMenuBtnText: {
+    color: COLORS.gold,
     fontSize: 14,
     fontWeight: '700',
     fontFamily: TYPOGRAPHY.fontFamilySans,

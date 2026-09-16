@@ -14,7 +14,7 @@ import { HeroMeta } from './HeroMeta';
 import { HeroCTA } from './HeroCTA';
 import { ScrollIndicator } from './ScrollIndicator';
 
-const VIDEO_SOURCE = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4';
+const VIDEO_SOURCE = '/videos/restaurant_video_2.mp4';
 const FALLBACK_IMAGE = '/photos/storefront_signboard.jpg';
 
 interface CinematicHeroProps {
@@ -34,22 +34,30 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({ onScrollDown }) =>
   const isDesktop = width >= 1024;
   const isLargeDesktop = width >= 1440;
 
-  // Autoplay attempt on web
+  // Autoplay attempt on web with reduced-motion respect
   useEffect(() => {
-    if (Platform.OS === 'web' && videoRef.current) {
-      const video = videoRef.current;
-      video.muted = true;
-      video.playsInline = true;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setVideoLoaded(true);
-          })
-          .catch(() => {
-            // Autoplay blocked by browser policy; video remains behind UI, poster or fallback active
-            setVideoLoaded(true);
-          });
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      if (prefersReducedMotion) {
+        setVideoLoaded(true);
+        return;
+      }
+
+      if (videoRef.current) {
+        const video = videoRef.current;
+        video.muted = true;
+        video.playsInline = true;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setVideoLoaded(true);
+            })
+            .catch(() => {
+              // Autoplay blocked by browser policy; video remains behind UI, poster or fallback active
+              setVideoLoaded(true);
+            });
+        }
       }
     }
   }, []);

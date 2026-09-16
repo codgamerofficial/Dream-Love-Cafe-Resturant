@@ -24,3 +24,10 @@ yarn-error.log*
 
 .vercel
 .env*.local
+
+# Raw client uploads (organized assets in public/ and assets/)
+WhatsApp*
+*.zip
+*.pdf
+scripts/check-*.js
+scripts/test-auth.js

@@ -10,10 +10,11 @@ import {
   Platform 
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Search, Sparkles, Utensils, X, Check, Filter } from 'lucide-react-native';
+import { Search, Sparkles, Utensils, X, Check, Filter, BookOpen } from 'lucide-react-native';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, LAYOUT, SHADOWS } from '../../src/theme';
 import { useSettings } from '../../src/context/SettingsContext';
 import { MenuCard } from '../../src/components/menu/MenuCard';
+import { OriginalMenuViewer } from '../../src/components/menu/OriginalMenuViewer';
 import { analytics } from '../../src/services/analytics';
 
 export default function MenuPage() {
@@ -30,6 +31,7 @@ export default function MenuPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory || 'all');
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'non-veg'>('all');
   const [onlyFeatured, setOnlyFeatured] = useState(false);
+  const [originalMenuOpen, setOriginalMenuOpen] = useState(false);
 
   // Sync category if URL parameter changes
   useEffect(() => {
@@ -104,6 +106,21 @@ export default function MenuPage() {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {/* View Original Printed Menu Artwork Button */}
+          <TouchableOpacity
+            style={styles.originalMenuTriggerBtn}
+            onPress={() => setOriginalMenuOpen(true)}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="View original 6-page physical menu artwork"
+          >
+            <BookOpen size={16} color={COLORS.warmGold} style={{ marginRight: 8 }} />
+            <Text style={styles.originalMenuTriggerBtnText}>
+              View Original Printed Menu (6 Pages)
+            </Text>
+            <Sparkles size={13} color={COLORS.warmGold} style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -226,11 +243,37 @@ export default function MenuPage() {
           </View>
         )}
       </View>
+
+      {/* 5. FULLSCREEN ORIGINAL PRINTED MENU VIEWER */}
+      <OriginalMenuViewer
+        isOpen={originalMenuOpen}
+        onClose={() => setOriginalMenuOpen(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  originalMenuTriggerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.pill,
+    backgroundColor: 'rgba(217, 164, 65, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(217, 164, 65, 0.35)',
+    alignSelf: 'center',
+  },
+  originalMenuTriggerBtnText: {
+    fontFamily: TYPOGRAPHY.fontFamilySans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.warmGold,
+    letterSpacing: 0.2,
+  },
   container: {
     width: '100%',
     backgroundColor: COLORS.background,

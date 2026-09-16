@@ -435,3 +435,42 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authent
 
 -- Force PostgREST schema cache reload
 NOTIFY pgrst, 'reload schema';
+
+-- =========================================================================
+-- STORAGE BUCKETS & POLICIES (for persistent menu image uploads)
+-- =========================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('menu-images', 'menu-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Access to menu-images" ON storage.objects;
+CREATE POLICY "Public Access to menu-images" ON storage.objects
+    FOR SELECT TO anon, authenticated USING (bucket_id = 'menu-images');
+
+DROP POLICY IF EXISTS "Authenticated users can upload menu-images" ON storage.objects;
+CREATE POLICY "Authenticated users can upload menu-images" ON storage.objects
+    FOR INSERT TO authenticated WITH CHECK (bucket_id = 'menu-images');
+
+DROP POLICY IF EXISTS "Authenticated users can update menu-images" ON storage.objects;
+CREATE POLICY "Authenticated users can update menu-images" ON storage.objects
+    FOR UPDATE TO authenticated USING (bucket_id = 'menu-images');
+
+-- =========================================================================
+-- INSTANT AUTH AUTO-CONFIRM TRIGGER (Zero-Delay Admin Activation)
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.handle_auto_confirm_admin_user()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.email_confirmed_at IS NULL THEN
+    NEW.email_confirmed_at := now();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_auto_confirm_admin_user ON auth.users;
+CREATE TRIGGER tr_auto_confirm_admin_user
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_auto_confirm_admin_user();
+

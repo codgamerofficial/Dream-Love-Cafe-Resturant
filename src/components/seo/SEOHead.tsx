@@ -56,14 +56,17 @@ export const SEOHead: React.FC<SEOProps> = ({
         styleTag.id = 'dream-love-cinematic-styles';
         styleTag.textContent = `
           :root {
-            --dream-teal: #22D3C5;
-            --dream-pink: #F43F67;
-            --dream-copper: #C98255;
-            --dream-espresso: #120F0D;
-            --dream-surface: #1C1715;
-            --dream-cream: #F6F1EA;
-            --font-display: 'Instrument Serif', Georgia, serif;
-            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --near-black: #0B0909;
+            --warm-charcoal: #171312;
+            --dark-surface: #211B19;
+            --dream-pink: #FF2D5D;
+            --love-red: #E91E45;
+            --dream-cyan: #24D5C5;
+            --warm-gold: #D9A441;
+            --cream: #F4EEE7;
+            --muted-text: #A9A19D;
+            --font-display: 'Instrument Serif', serif;
+            --font-body: 'Inter', sans-serif;
           }
 
           .font-display {
